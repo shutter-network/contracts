@@ -1,0 +1,45 @@
+default_language_version:
+  python: python3
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: check-added-large-files
+        args: ["--maxkb=1000"]
+      - id: fix-byte-order-marker
+      - id: check-case-conflict
+      - id: check-merge-conflict
+      - id: check-toml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v3.0.0-alpha.9-for-vscode
+    hooks:
+      - id: prettier
+        additional_dependencies:
+          ["prettier@2.8.8", "prettier-plugin-solidity@1.1.3"]
+        args: ["--plugin=prettier-plugin-solidity"]
+        types_or:
+          [
+            "yaml",
+            "markdown",
+            "solidity",
+            "makefile",
+            "gitignore",
+            "toml",
+            "json",
+            "javascript",
+            "proto",
+          ]
+
+  - repo: local
+    hooks:
+      - id: bindings
+        name: bindings
+        entry: ./gen_bindings.sh
+        language: script
+        types: [solidity]
+        files: gen_bindings.sh
+        pass_filenames: false
