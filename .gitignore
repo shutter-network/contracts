@@ -1,0 +1,17 @@
+# Compiler files
+cache/
+out/
+
+
+broadcast/
+artifacts/
+
+# Docs
+docs/
+
+# local development
+.direnv
+.devenv
+
+# Dotenv file
+.env

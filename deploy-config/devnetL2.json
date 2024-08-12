@@ -1,0 +1,8 @@
+{
+  "enableShutter": true,
+  "l1Blocktime": 12,
+  "l2Blocktime": 6,
+  "shutterBlockGasLimit": 5000000,
+  "shutterDaoAddress": "0x2a0D87eA3a9E0ca33Ddd4a62C33878b58152effE",
+  "shutterSequencerAddress": "0x2a0D87eA3a9E0ca33Ddd4a62C33878b58152effE"
+}
