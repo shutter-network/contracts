@@ -4,13 +4,11 @@ pragma solidity ^0.8.22;
 import "./lib/openzeppelin/contracts/utils/math/Math.sol";
 import "./KeyperSet.sol";
 import "./lib/RestrictedPausable.sol";
+import "./intf/IKeyperSetManager.sol";
 
-error KeyperSetNotFinalized();
-error AlreadyHaveKeyperSet();
-error NoActiveKeyperSet();
 error AlreadyDeactivated();
 
-contract KeyperSetManager is RestrictedPausable {
+contract KeyperSetManager is RestrictedPausable, IKeyperSetManager {
     struct KeyperSetData {
         uint64 activationBlock;
         address contractAddress;
