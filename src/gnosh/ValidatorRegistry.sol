@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "src/IValidatorRegistry.sol";
+import "./intf/IValidatorRegistry.sol";
 
 contract ValidatorRegistry is IValidatorRegistry {
     Update[] updates;

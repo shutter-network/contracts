@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
-import "src/KeyperSetManager.sol";
-import "src/KeyperSet.sol";
+import "./KeyperSetManager.sol";
+import "./KeyperSet.sol";
 
 error InvalidKey();
 error NotAllowed();

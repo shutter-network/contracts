@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
-import "src/KeyBroadcastContract.sol";
+import "./KeyBroadcastContract.sol";
 
 error AlreadyVoted();
 
