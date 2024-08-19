@@ -3,6 +3,10 @@
 CONTRACTS=(
     "Sequencer"
     "ValidatorRegistry"
+    "KeyperSetManager"
+    "KeyperSet"
+    "EonKeyPublish"
+    "KeyBroadcastContract"
 )
 OUTPUT_DIR="gnoshcontracts"
 PACKAGE_NAME="gnoshcontracts"

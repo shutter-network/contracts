@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
-import "./RestrictedPausable.sol";
+import "../common/RestrictedPausable.sol";
 
 error InsufficientFunds();
 error BlockAlreadyFinalized();

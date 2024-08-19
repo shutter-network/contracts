@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "./intf/ISequencer.sol";
+import "../common/intf/ISequencer.sol";
 
 contract Sequencer is ISequencer {
     mapping(uint64 eon => uint64 txCount) private txCounters;

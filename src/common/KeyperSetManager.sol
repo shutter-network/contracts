@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
-import "./lib/openzeppelin/contracts/utils/math/Math.sol";
+import "openzeppelin/contracts/utils/math/Math.sol";
 import "./KeyperSet.sol";
-import "./lib/RestrictedPausable.sol";
+import "./RestrictedPausable.sol";
 import "./intf/IKeyperSetManager.sol";
 
 error AlreadyDeactivated();

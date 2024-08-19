@@ -1,7 +1,7 @@
 [profile.default]
 src = "src"
 out = "out"
-libs = ["src/common/lib"]
+libs = ["lib"]
 solc = "0.8.22"
 
 extra_output = ['devdoc', 'userdoc', 'metadata', 'storageLayout']
