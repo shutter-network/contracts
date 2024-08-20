@@ -2,8 +2,8 @@
 pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
-import "../src/IValidatorRegistry.sol";
-import "../src/ValidatorRegistry.sol";
+import "../src/common/intf/IValidatorRegistry.sol";
+import "../src/gnosh/ValidatorRegistry.sol";
 
 contract ValidatorRegistryTest is Test {
     event Updated(bytes message, bytes signature);

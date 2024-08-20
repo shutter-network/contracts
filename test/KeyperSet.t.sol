@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
-import "../src/KeyperSet.sol";
+import "../src/common/KeyperSet.sol";
 
 contract KeyperSetRevertAfterFinalizedTest is Test {
     KeyperSet public keyperSet;
@@ -23,9 +23,9 @@ contract KeyperSetRevertAfterFinalizedTest is Test {
         keyperSet.addMembers(members);
     }
 
-    function testSetKeyBroadcaster() public {
+    function testSetPublisher() public {
         vm.expectRevert(AlreadyFinalized.selector);
-        keyperSet.setKeyBroadcaster(address(5));
+        keyperSet.setPublisher(address(5));
     }
 }
 
@@ -89,7 +89,7 @@ contract KeyperSetTest is Test {
     function testSetKeybroadcasterOnlyOwner() public {
         vm.expectRevert("Ownable: caller is not the owner");
         vm.prank(address(1));
-        keyperSet.setKeyBroadcaster(address(5));
+        keyperSet.setPublisher(address(5));
     }
 
     function testThreshold() public {
@@ -105,7 +105,7 @@ contract KeyperSetTest is Test {
     }
 
     function testBroadcaster() public {
-        keyperSet.setKeyBroadcaster(address(5));
+        keyperSet.setPublisher(address(5));
         keyperSet.setFinalized();
 
         assertEq(keyperSet.isAllowedToBroadcastEonKey(address(1)), false);

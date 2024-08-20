@@ -2,8 +2,8 @@
 pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
-import "../src/ISequencer.sol";
-import "../src/Sequencer.sol";
+import "../src/common/intf/ISequencer.sol";
+import "../src/gnosh/Sequencer.sol";
 
 contract SequencerTest is Test {
     Sequencer public sequencer;
