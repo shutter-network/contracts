@@ -2,8 +2,8 @@
 pragma solidity ^0.8.22;
 
 import "forge-std/Script.sol";
-import {KeyperSetManager} from "../src/KeyperSetManager.sol";
-import {KeyBroadcastContract} from "../src/KeyBroadcastContract.sol";
+import {KeyperSetManager} from "../src/common/KeyperSetManager.sol";
+import {KeyBroadcastContract} from "../src/common/KeyBroadcastContract.sol";
 
 contract DeployGnosis is Script {
     function run() public {

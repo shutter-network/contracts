@@ -2,10 +2,10 @@
 pragma solidity ^0.8.22;
 
 import "forge-std/Script.sol";
-import {KeyperSet} from "../src/KeyperSet.sol";
-import {KeyperSetManager} from "../src/KeyperSetManager.sol";
-import {KeyBroadcastContract} from "../src/KeyBroadcastContract.sol";
-import {EonKeyPublish} from "../src/EonKeyPublish.sol";
+import {KeyperSet} from "../src/common/KeyperSet.sol";
+import {KeyperSetManager} from "../src/common/KeyperSetManager.sol";
+import {KeyBroadcastContract} from "../src/common/KeyBroadcastContract.sol";
+import {EonKeyPublish} from "../src/common/EonKeyPublish.sol";
 
 error ActivationDeltaTooLow();
 error ThresholdExceedsKeyperSetSize(uint256 threshold, uint256 keyperSetSize);

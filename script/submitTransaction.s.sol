@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "forge-std/Script.sol";
-import "../src/Sequencer.sol";
+import "../src/gnosh/Sequencer.sol";
 
 contract SubmitTransaction is Script {
     function run() external {

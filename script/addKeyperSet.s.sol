@@ -3,8 +3,8 @@ pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
 import "forge-std/Script.sol";
-import "../src/KeyperSet.sol";
-import "../src/KeyperSetManager.sol";
+import "../src/common/KeyperSet.sol";
+import "../src/common/KeyperSetManager.sol";
 
 contract AddKeyperSet is Script, Test {
     function run() external {
@@ -50,7 +50,7 @@ contract AddKeyperSet is Script, Test {
         KeyperSet ks = new KeyperSet();
         ks.addMembers(keypers);
         ks.setThreshold(uint64(threshold));
-        ks.setKeyBroadcaster(key_broadcaster);
+        ks.setPublisher(key_broadcaster);
         ks.setFinalized();
 
         KeyperSetManager ksm = KeyperSetManager(ksmAddress);

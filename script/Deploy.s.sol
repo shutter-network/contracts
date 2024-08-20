@@ -2,10 +2,10 @@
 pragma solidity ^0.8.22;
 
 import "forge-std/Script.sol";
-import "../src/Inbox.sol";
-import "../src/KeyperSet.sol";
-import "../src/KeyperSetManager.sol";
-import "../src/KeyBroadcastContract.sol";
+import "../src/shop/Inbox.sol";
+import "../src/common/KeyperSet.sol";
+import "../src/common/KeyperSetManager.sol";
+import "../src/common/KeyBroadcastContract.sol";
 
 error ActivationDeltaTooLow();
 
