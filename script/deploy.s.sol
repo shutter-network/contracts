@@ -9,11 +9,8 @@ import "../src/gnosh/Sequencer.sol";
 import "../src/gnosh/ValidatorRegistry.sol";
 
 contract Deploy is Script {
-    uint256 deployerPrivateKey;
-    address deployerAddress;
-    function deployKeyperSetManager() public returns (KeyperSetManager) {
+    function deployKeyperSetManager(address deployerAddress) public returns (KeyperSetManager) {
 
-        deployerAddress = vm.addr(deployerPrivateKey);
         KeyperSetManager ksm = new KeyperSetManager(deployerAddress);
 
         // add bootstrap keyper set
@@ -51,7 +48,7 @@ contract Deploy is Script {
         console.log("Deployer:", deployerAddress);
         vm.startBroadcast(deployKey);
 
-        KeyperSetManager ksm = deployKeyperSetManager();
+        KeyperSetManager ksm = deployKeyperSetManager(deployerAddress);
         deployKeyBroadcastContract(ksm);
         deploySequencer();
         deployValidatorRegistry();
