@@ -2,7 +2,6 @@
 
 CONTRACTS=(
     "Inbox"
-    "ValidatorRegistry"
     "KeyperSetManager"
     "KeyperSet"
     "EonKeyPublish"
