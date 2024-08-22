@@ -75,19 +75,34 @@ contract KeyperSetTest is Test {
 
     function testAddMembersOnlyOwner() public {
         address[] memory members = new address[](0);
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Ownable.OwnableUnauthorizedAccount.selector,
+                address(1)
+            )
+        );
         vm.prank(address(1));
         keyperSet.addMembers(members);
     }
 
     function testSetThresholdOnlyOwner() public {
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Ownable.OwnableUnauthorizedAccount.selector,
+                address(1)
+            )
+        );
         vm.prank(address(1));
         keyperSet.setThreshold(0);
     }
 
     function testSetKeybroadcasterOnlyOwner() public {
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Ownable.OwnableUnauthorizedAccount.selector,
+                address(1)
+            )
+        );
         vm.prank(address(1));
         keyperSet.setPublisher(address(5));
     }
@@ -99,7 +114,12 @@ contract KeyperSetTest is Test {
     }
 
     function testSetFinalizedOnlyOwner() public {
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Ownable.OwnableUnauthorizedAccount.selector,
+                address(1)
+            )
+        );
         vm.prank(address(1));
         keyperSet.setFinalized();
     }
