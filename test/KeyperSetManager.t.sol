@@ -10,7 +10,7 @@ contract KeyperSetManagerTest is Test {
     KeyperSet public members0;
     KeyperSet public members1;
     address public owner;
-    
+
     function setUp() public {
         owner = vm.addr(42);
         vm.prank(owner);
@@ -26,10 +26,10 @@ contract KeyperSetManagerTest is Test {
     function testGetNumKeyperSets() public {
         assertEq(keyperSetManager.getNumKeyperSets(), 0);
         vm.prank(owner);
-        keyperSetManager.addKeyperSet(0, address(members0));
+        keyperSetManager.addKeyperSet(1, address(members0));
         assertEq(keyperSetManager.getNumKeyperSets(), 1);
         vm.prank(owner);
-        keyperSetManager.addKeyperSet(1, address(members0));
+        keyperSetManager.addKeyperSet(2, address(members0));
         assertEq(keyperSetManager.getNumKeyperSets(), 2);
     }
 
@@ -39,7 +39,7 @@ contract KeyperSetManagerTest is Test {
             abi.encodeWithSelector(
                 IAccessControl.AccessControlUnauthorizedAccount.selector,
                 address(1),
-                keyperSetManager.DEFAULT_ADMIN_ROLE
+                0
             )
         );
         keyperSetManager.addKeyperSet(0, address(members0));
@@ -48,23 +48,43 @@ contract KeyperSetManagerTest is Test {
     function testAddKeyperSetRequiresFinalizedSet() public {
         KeyperSet ks = new KeyperSet();
         vm.expectRevert(KeyperSetNotFinalized.selector);
+        vm.prank(owner);
         keyperSetManager.addKeyperSet(0, address(ks));
     }
 
     function testAddKeyperSetRequiresIncreasingActivationBlock() public {
+        vm.prank(owner);
         keyperSetManager.addKeyperSet(1000, address(members0));
         vm.expectRevert(AlreadyHaveKeyperSet.selector);
+        vm.prank(owner);
         keyperSetManager.addKeyperSet(999, address(members1));
+        vm.prank(owner);
         keyperSetManager.addKeyperSet(1000, address(members1));
     }
 
-    event KeyperSetAdded(uint64 activationSlot, address keyperSetContract);
+    event KeyperSetAdded(
+        uint64 activationBlock,
+        address keyperSetContract,
+        address[] members,
+        uint64 threshold,
+        uint64 eon
+    );
 
     function testAddKeyperSetEmits() public {
         vm.expectEmit(address(keyperSetManager));
-        emit KeyperSetAdded(1000, address(members0));
+        address[] memory members;
+        emit KeyperSetAdded(
+            1000,
+            address(members0),
+            members,
+            0,
+            0
+        );
         vm.prank(owner);
-        keyperSetManager.addKeyperSet(1000, address(members0));
+        keyperSetManager.addKeyperSet(
+            1000,
+            address(members0)
+        );
     }
 
     function testGetKeyperSetIndexByBlockEmpty() public {
@@ -73,7 +93,9 @@ contract KeyperSetManagerTest is Test {
     }
 
     function testGetKeyperSetIndexByBlock() public {
+        vm.prank(owner);
         keyperSetManager.addKeyperSet(1000, address(members0));
+        vm.prank(owner);
         keyperSetManager.addKeyperSet(1100, address(members1));
 
         vm.expectRevert(NoActiveKeyperSet.selector);
@@ -90,14 +112,18 @@ contract KeyperSetManagerTest is Test {
     }
 
     function testGetKeyperSetActivationBlock() public {
+        vm.prank(owner);
         keyperSetManager.addKeyperSet(1000, address(members0));
+        vm.prank(owner);
         keyperSetManager.addKeyperSet(1100, address(members1));
         assertEq(keyperSetManager.getKeyperSetActivationBlock(0), 1000);
         assertEq(keyperSetManager.getKeyperSetActivationBlock(1), 1100);
     }
 
     function testGetKeyperSetAddress() public {
+        vm.prank(owner);
         keyperSetManager.addKeyperSet(1000, address(members0));
+        vm.prank(owner);
         keyperSetManager.addKeyperSet(1100, address(members1));
         assertEq(keyperSetManager.getKeyperSetAddress(0), address(members0));
         assertEq(keyperSetManager.getKeyperSetAddress(1), address(members1));
