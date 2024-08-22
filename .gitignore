@@ -3,3 +3,4 @@ cache/
 gnoshcontracts/
 shopcontracts/
 out/
+.tool-versions
