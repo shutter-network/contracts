@@ -2,7 +2,7 @@
 pragma solidity ^0.8.22;
 
 import "forge-std/Test.sol";
-import "../src/Inbox.sol";
+import "../src/shop/Inbox.sol";
 
 contract NonReceivable {}
 

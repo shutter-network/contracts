@@ -2,7 +2,7 @@
 pragma solidity ^0.8.22;
 
 import "forge-std/Test.sol";
-import "../src/EonKeyPublish.sol";
+import "../src/common/EonKeyPublish.sol";
 
 contract EonKeyPublishTest is Test {
     KeyperSetManager public manager;
@@ -194,7 +194,6 @@ contract EonKeyPublishTest is Test {
     }
 
     function testHasVoted() public {
-        uint64 eon = 1;
         address[] memory members = new address[](5);
         members[0] = address(61);
         members[1] = address(62);
