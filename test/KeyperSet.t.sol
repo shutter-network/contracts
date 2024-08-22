@@ -96,7 +96,7 @@ contract KeyperSetTest is Test {
         keyperSet.setThreshold(0);
     }
 
-    function testSetKeybroadcasterOnlyOwner() public {
+    function testSetPublisherOnlyOwner() public {
         vm.expectRevert(
             abi.encodeWithSelector(
                 Ownable.OwnableUnauthorizedAccount.selector,
@@ -124,7 +124,7 @@ contract KeyperSetTest is Test {
         keyperSet.setFinalized();
     }
 
-    function testBroadcaster() public {
+    function testPublisher() public {
         keyperSet.setPublisher(address(5));
         keyperSet.setFinalized();
 
