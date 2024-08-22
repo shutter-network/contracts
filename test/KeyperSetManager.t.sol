@@ -77,18 +77,9 @@ contract KeyperSetManagerTest is Test {
     function testAddKeyperSetEmits() public {
         vm.expectEmit(address(keyperSetManager));
         address[] memory members;
-        emit KeyperSetAdded(
-            1000,
-            address(members0),
-            members,
-            0,
-            0
-        );
+        emit KeyperSetAdded(1000, address(members0), members, 0, 0);
         vm.prank(dao);
-        keyperSetManager.addKeyperSet(
-            1000,
-            address(members0)
-        );
+        keyperSetManager.addKeyperSet(1000, address(members0));
     }
 
     function testGetKeyperSetIndexByBlockEmpty() public {

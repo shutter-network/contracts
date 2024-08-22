@@ -9,8 +9,9 @@ import "../src/gnosh/Sequencer.sol";
 import "../src/gnosh/ValidatorRegistry.sol";
 
 contract Deploy is Script {
-    function deployKeyperSetManager(address deployerAddress) public returns (KeyperSetManager) {
-
+    function deployKeyperSetManager(
+        address deployerAddress
+    ) public returns (KeyperSetManager) {
         KeyperSetManager ksm = new KeyperSetManager(deployerAddress);
 
         // add bootstrap keyper set
