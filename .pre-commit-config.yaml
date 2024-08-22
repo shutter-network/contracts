@@ -36,10 +36,20 @@ repos:
 
   - repo: local
     hooks:
-      - id: bindings
-        name: bindings
-        entry: ./gen_bindings.sh
+      - id: bindings-gnosh
+        name: bindings-gnosh
+        entry: ./gen_gnosh_bindings.sh
         language: script
         types: [solidity]
-        files: gen_bindings.sh
+        files: gen_gnosh_bindings.sh
+        pass_filenames: false
+
+  - repo: local
+    hooks:
+      - id: bindings-shop
+        name: bindings-shop
+        entry: ./gen_shop_bindings.sh
+        language: script
+        types: [solidity]
+        files: gen_shop_bindings.sh
         pass_filenames: false
