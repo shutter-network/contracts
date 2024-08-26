@@ -1,14 +1,16 @@
 #!/bin/bash
 
 CONTRACTS=(
-    "Inbox"
+    "Sequencer"
+    "ValidatorRegistry"
     "KeyperSetManager"
     "KeyperSet"
     "EonKeyPublish"
     "KeyBroadcastContract"
+    "Inbox"
 )
-OUTPUT_DIR="shopcontracts"
-PACKAGE_NAME="shopcontracts"
+OUTPUT_DIR="bindings"
+PACKAGE_NAME="bindings"
 
 mkdir -p "$OUTPUT_DIR"
 
