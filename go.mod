@@ -1,4 +1,4 @@
-module github.com/shutter-network/gnosh-contracts
+module github.com/shutter-network/contracts/v2
 
 go 1.21.4
 
