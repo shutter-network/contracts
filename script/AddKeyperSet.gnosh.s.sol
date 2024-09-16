@@ -1,67 +1,82 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.22;
 
-import "forge-std/Test.sol";
 import "forge-std/Script.sol";
-import "../src/common/KeyperSet.sol";
-import "../src/common/KeyperSetManager.sol";
+import {KeyperSet} from "../src/common/KeyperSet.sol";
+import {KeyperSetManager} from "../src/common/KeyperSetManager.sol";
+import {KeyBroadcastContract} from "../src/common/KeyBroadcastContract.sol";
+import {EonKeyPublish} from "../src/common/EonKeyPublish.sol";
 
-contract AddKeyperSet is Script, Test {
-    function run() external {
-        uint256 deployKey = vm.envUint("DEPLOY_KEY");
-        address deployerAddress = vm.addr(deployKey);
-        console.log("Deployer:", deployerAddress);
+error ActivationDeltaTooLow();
+error ThresholdExceedsKeyperSetSize(uint256 threshold, uint256 keyperSetSize);
+error UnexpectedKeyperSet(
+    uint256 index,
+    address expectedKeyperSet,
+    address actualKeyperSet
+);
 
-        address ksmAddress = vm.envAddress("KEYPER_SET_MANAGER");
+contract AddKeyperSet is Script {
+    function run() public {
+        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+        address deployerAddress = vm.addr(deployerPrivateKey);
+        console.log("deployer:", deployerAddress);
+        vm.startBroadcast(deployerPrivateKey);
+
+        uint256 activationDelta = vm.envOr("ACTIVATION_DELTA", uint256(1));
+        if (activationDelta < 1) {
+            revert ActivationDeltaTooLow();
+        }
+
+        address keyperSetManagerAddress = vm.envAddress(
+            "KEYPERSETMANAGER_ADDRESS"
+        );
+        KeyperSetManager keyperSetManager = KeyperSetManager(
+            keyperSetManagerAddress
+        );
+
+        address keyBroadcastContractAddress = vm.envAddress(
+            "KEYBROADCAST_ADDRESS"
+        );
+        KeyBroadcastContract keyBroadcastContract = KeyBroadcastContract(
+            keyBroadcastContractAddress
+        );
+
         address[] memory keypers = vm.envAddress("KEYPER_ADDRESSES", ",");
         uint256 threshold = vm.envUint("THRESHOLD");
-        uint256 activationBlockNumber = vm.envUint("ACTIVATION_BLOCK_NUMBER");
-        uint256 activationBlockDelta = vm.envUint("ACTIVATION_BLOCK_DELTA");
-        address key_broadcaster = vm.envAddress("KEY_BROADCASTER");
-
-        uint32 size;
-        assembly {
-            size := extcodesize(ksmAddress)
-        }
-        require(size > 0, "no contract deployed at given keyper set address");
-        require(keypers.length > 0, "given keyper set is empty");
-        require(
-            threshold <= keypers.length,
-            "threshold exceeds keyper set size"
-        );
-        require(
-            activationBlockNumber > 0 || activationBlockDelta > 0,
-            "neither activation block number nor delta is given"
-        );
-        require(
-            activationBlockNumber == 0 || activationBlockDelta == 0,
-            "both activation block number and delta is given"
-        );
-        require(
-            key_broadcaster != address(0),
-            "key broadcaster is zero address"
-        );
-
-        if (activationBlockDelta > 0) {
-            activationBlockNumber = block.number + activationBlockDelta;
+        if (threshold > keypers.length) {
+            revert ThresholdExceedsKeyperSetSize(threshold, keypers.length);
         }
 
-        vm.startBroadcast(deployKey);
-        KeyperSet ks = new KeyperSet();
-        ks.addMembers(keypers);
-        ks.setThreshold(uint64(threshold));
-        ks.setPublisher(key_broadcaster);
-        ks.setFinalized();
+        uint64 keyperSetIndex = keyperSetManager.getNumKeyperSets();
+        KeyperSet keyperSet = new KeyperSet();
+        EonKeyPublish eonKeyPublish = new EonKeyPublish(
+            address(keyperSet),
+            address(keyBroadcastContract),
+            keyperSetIndex
+        );
+        keyperSet.addMembers(keypers);
+        keyperSet.setThreshold(uint64(threshold));
+        keyperSet.setPublisher(address(eonKeyPublish));
+        keyperSet.setFinalized();
+        console.log("keyperSet:", address(keyperSet));
+        console.log("eonKeyPublish:", address(eonKeyPublish));
 
-        KeyperSetManager ksm = KeyperSetManager(ksmAddress);
-        ksm.addKeyperSet(uint64(activationBlockNumber), address(ks));
-        uint256 index = ksm.getNumKeyperSets() - 1;
+        uint64 activationBlock = uint64(block.number + activationDelta);
+        keyperSetManager.addKeyperSet(activationBlock, address(keyperSet));
+        console.log("activationBlock:", activationBlock);
+        console.log("keyperSetIndex:", keyperSetIndex);
+
+        address actualKeyperSet = keyperSetManager.getKeyperSetAddress(
+            keyperSetIndex
+        );
+        if (actualKeyperSet != address(keyperSet)) {
+            revert UnexpectedKeyperSet(
+                keyperSetIndex,
+                address(keyperSet),
+                actualKeyperSet
+            );
+        }
+
         vm.stopBroadcast();
-
-        console.log("Keyper set added at index", index);
-        console.log("Index:", index);
-        console.log("Num members:", keypers.length);
-        console.log("Threshold:", threshold);
-        console.log("Activation block number:", activationBlockNumber);
     }
 }
