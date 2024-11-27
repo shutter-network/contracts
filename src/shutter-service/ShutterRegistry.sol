@@ -9,7 +9,6 @@ import "openzeppelin/contracts/access/Ownable.sol";
  * Inherits from OpenZeppelin's Ownable contract to enable ownership-based access control.
  */
 contract ShutterRegistry is Ownable {
-
     // Custom error for when an identity is already registered.
     error AlreadyRegistered();
 
@@ -24,6 +23,7 @@ contract ShutterRegistry is Ownable {
 
     /**
      * @dev Emitted when a new identity is successfully registered.
+     * @param eon The eon associated with the identity. 
      * @param identityPrefix The raw prefix input used to derive the registered identity hash.
      * @param sender The address of the account that performed the registration.
      * @param timestamp The timestamp associated with the registered identity.
@@ -50,9 +50,15 @@ contract ShutterRegistry is Ownable {
      * - The identity must not already be registered.
      * - The provided timestamp must not be in the past.
      */
-    function register(uint64 eon, bytes32 identityPrefix, uint64 timestamp) external {
+    function register(
+        uint64 eon,
+        bytes32 identityPrefix,
+        uint64 timestamp
+    ) external {
         // Generate the identity hash from the provided prefix and the sender's address.
-        bytes32 identity = keccak256(abi.encodePacked(identityPrefix, msg.sender));
+        bytes32 identity = keccak256(
+            abi.encodePacked(identityPrefix, msg.sender)
+        );
 
         // Ensure the identity is not already registered.
         require(registrations[identity] == uint64(0), AlreadyRegistered());
@@ -64,11 +70,6 @@ contract ShutterRegistry is Ownable {
         registrations[identity] = timestamp;
 
         // Emit the IdentityRegistered event.
-        emit IdentityRegistered(
-            eon,
-            identityPrefix,
-            msg.sender,
-            timestamp
-        );
+        emit IdentityRegistered(eon, identityPrefix, msg.sender, timestamp);
     }
 }
