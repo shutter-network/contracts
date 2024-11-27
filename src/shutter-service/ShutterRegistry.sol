@@ -29,6 +29,7 @@ contract ShutterRegistry is Ownable {
      * @param timestamp The timestamp associated with the registered identity.
      */
     event IdentityRegistered(
+        uint64 eon,
         bytes32 identityPrefix,
         address sender,
         uint64 timestamp
@@ -42,13 +43,14 @@ contract ShutterRegistry is Ownable {
     /**
      * @notice Registers a new identity with a specified timestamp.
      * @dev The identity is derived by hashing the provided `identityPrefix` concatenated with the sender's address.
+     * @param eon The eon associated with the identity.
      * @param identityPrefix The input used to derive the identity hash.
      * @param timestamp The future timestamp to be associated with the identity.
      * @custom:requirements
      * - The identity must not already be registered.
      * - The provided timestamp must not be in the past.
      */
-    function register(bytes32 identityPrefix, uint64 timestamp) external {
+    function register(uint64 eon, bytes32 identityPrefix, uint64 timestamp) external {
         // Generate the identity hash from the provided prefix and the sender's address.
         bytes32 identity = keccak256(abi.encodePacked(identityPrefix, msg.sender));
 
@@ -63,6 +65,7 @@ contract ShutterRegistry is Ownable {
 
         // Emit the IdentityRegistered event.
         emit IdentityRegistered(
+            eon,
             identityPrefix,
             msg.sender,
             timestamp
