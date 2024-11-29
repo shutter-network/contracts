@@ -26,11 +26,12 @@ var (
 	_ = common.Big1
 	_ = types.BloomLookup
 	_ = event.NewSubscription
+	_ = abi.ConvertType
 )
 
 // ShutterregistryMetaData contains all meta data concerning the Shutterregistry contract.
 var ShutterregistryMetaData = &bind.MetaData{
-	ABI: "[{\"type\":\"constructor\",\"inputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"owner\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"register\",\"inputs\":[{\"name\":\"eon\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"identityPrefix\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"timestamp\",\"type\":\"uint64\",\"internalType\":\"uint64\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"registrations\",\"inputs\":[{\"name\":\"identity\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[{\"name\":\"timestamp\",\"type\":\"uint64\",\"internalType\":\"uint64\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"renounceOwnership\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"transferOwnership\",\"inputs\":[{\"name\":\"newOwner\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"event\",\"name\":\"IdentityRegistered\",\"inputs\":[{\"name\":\"eon\",\"type\":\"uint64\",\"indexed\":false,\"internalType\":\"uint64\"},{\"name\":\"identityPrefix\",\"type\":\"bytes32\",\"indexed\":false,\"internalType\":\"bytes32\"},{\"name\":\"sender\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"},{\"name\":\"timestamp\",\"type\":\"uint64\",\"indexed\":false,\"internalType\":\"uint64\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"OwnershipTransferred\",\"inputs\":[{\"name\":\"previousOwner\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"newOwner\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"error\",\"name\":\"AlreadyRegistered\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"OwnableInvalidOwner\",\"inputs\":[{\"name\":\"owner\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"OwnableUnauthorizedAccount\",\"inputs\":[{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"TimestampInThePast\",\"inputs\":[]}]",
+	ABI: "[{\"type\":\"constructor\",\"inputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"owner\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"register\",\"inputs\":[{\"name\":\"eon\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"identityPrefix\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"timestamp\",\"type\":\"uint64\",\"internalType\":\"uint64\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"registrations\",\"inputs\":[{\"name\":\"identity\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[{\"name\":\"eon\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"timestamp\",\"type\":\"uint64\",\"internalType\":\"uint64\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"renounceOwnership\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"transferOwnership\",\"inputs\":[{\"name\":\"newOwner\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"event\",\"name\":\"IdentityRegistered\",\"inputs\":[{\"name\":\"eon\",\"type\":\"uint64\",\"indexed\":false,\"internalType\":\"uint64\"},{\"name\":\"identityPrefix\",\"type\":\"bytes32\",\"indexed\":false,\"internalType\":\"bytes32\"},{\"name\":\"sender\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"},{\"name\":\"timestamp\",\"type\":\"uint64\",\"indexed\":false,\"internalType\":\"uint64\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"OwnershipTransferred\",\"inputs\":[{\"name\":\"previousOwner\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"newOwner\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"error\",\"name\":\"AlreadyRegistered\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"OwnableInvalidOwner\",\"inputs\":[{\"name\":\"owner\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"OwnableUnauthorizedAccount\",\"inputs\":[{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"TimestampInThePast\",\"inputs\":[]}]",
 }
 
 // ShutterregistryABI is the input ABI used to generate the binding from.
@@ -134,11 +135,11 @@ func NewShutterregistryFilterer(address common.Address, filterer bind.ContractFi
 
 // bindShutterregistry binds a generic wrapper to an already deployed contract.
 func bindShutterregistry(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
-	parsed, err := abi.JSON(strings.NewReader(ShutterregistryABI))
+	parsed, err := ShutterregistryMetaData.GetAbi()
 	if err != nil {
 		return nil, err
 	}
-	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
+	return bind.NewBoundContract(address, *parsed, caller, transactor, filterer), nil
 }
 
 // Call invokes the (constant) contract method with params as input values and
@@ -212,32 +213,46 @@ func (_Shutterregistry *ShutterregistryCallerSession) Owner() (common.Address, e
 
 // Registrations is a free data retrieval call binding the contract method 0xda7c6a42.
 //
-// Solidity: function registrations(bytes32 identity) view returns(uint64 timestamp)
-func (_Shutterregistry *ShutterregistryCaller) Registrations(opts *bind.CallOpts, identity [32]byte) (uint64, error) {
+// Solidity: function registrations(bytes32 identity) view returns(uint64 eon, uint64 timestamp)
+func (_Shutterregistry *ShutterregistryCaller) Registrations(opts *bind.CallOpts, identity [32]byte) (struct {
+	Eon       uint64
+	Timestamp uint64
+}, error) {
 	var out []interface{}
 	err := _Shutterregistry.contract.Call(opts, &out, "registrations", identity)
 
+	outstruct := new(struct {
+		Eon       uint64
+		Timestamp uint64
+	})
 	if err != nil {
-		return *new(uint64), err
+		return *outstruct, err
 	}
 
-	out0 := *abi.ConvertType(out[0], new(uint64)).(*uint64)
+	outstruct.Eon = *abi.ConvertType(out[0], new(uint64)).(*uint64)
+	outstruct.Timestamp = *abi.ConvertType(out[1], new(uint64)).(*uint64)
 
-	return out0, err
+	return *outstruct, err
 
 }
 
 // Registrations is a free data retrieval call binding the contract method 0xda7c6a42.
 //
-// Solidity: function registrations(bytes32 identity) view returns(uint64 timestamp)
-func (_Shutterregistry *ShutterregistrySession) Registrations(identity [32]byte) (uint64, error) {
+// Solidity: function registrations(bytes32 identity) view returns(uint64 eon, uint64 timestamp)
+func (_Shutterregistry *ShutterregistrySession) Registrations(identity [32]byte) (struct {
+	Eon       uint64
+	Timestamp uint64
+}, error) {
 	return _Shutterregistry.Contract.Registrations(&_Shutterregistry.CallOpts, identity)
 }
 
 // Registrations is a free data retrieval call binding the contract method 0xda7c6a42.
 //
-// Solidity: function registrations(bytes32 identity) view returns(uint64 timestamp)
-func (_Shutterregistry *ShutterregistryCallerSession) Registrations(identity [32]byte) (uint64, error) {
+// Solidity: function registrations(bytes32 identity) view returns(uint64 eon, uint64 timestamp)
+func (_Shutterregistry *ShutterregistryCallerSession) Registrations(identity [32]byte) (struct {
+	Eon       uint64
+	Timestamp uint64
+}, error) {
 	return _Shutterregistry.Contract.Registrations(&_Shutterregistry.CallOpts, identity)
 }
 

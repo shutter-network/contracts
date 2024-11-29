@@ -15,15 +15,19 @@ contract ShutterRegistry is Ownable {
     // Custom error for when a provided timestamp is in the past.
     error TimestampInThePast();
 
+    struct RegsitrationData {
+        uint64 eon;
+        uint64 timestamp;
+    }
     /**
      * @dev Mapping to store registration timestamps for each identity.
      *      The identity is represented as a `bytes32` hash and mapped to a uint64 timestamp.
      */
-    mapping(bytes32 identity => uint64 timestamp) public registrations;
+    mapping(bytes32 identity => RegsitrationData) public registrations;
 
     /**
      * @dev Emitted when a new identity is successfully registered.
-     * @param eon The eon associated with the identity. 
+     * @param eon The eon associated with the identity.
      * @param identityPrefix The raw prefix input used to derive the registered identity hash.
      * @param sender The address of the account that performed the registration.
      * @param timestamp The timestamp associated with the registered identity.
@@ -55,19 +59,20 @@ contract ShutterRegistry is Ownable {
         bytes32 identityPrefix,
         uint64 timestamp
     ) external {
+        // Ensure the timestamp is not in the past.
+        require(timestamp >= block.timestamp, TimestampInThePast());
+
         // Generate the identity hash from the provided prefix and the sender's address.
         bytes32 identity = keccak256(
             abi.encodePacked(identityPrefix, msg.sender)
         );
-
+        RegsitrationData storage registrationData = registrations[identity];
         // Ensure the identity is not already registered.
-        require(registrations[identity] == uint64(0), AlreadyRegistered());
-
-        // Ensure the timestamp is not in the past.
-        require(timestamp >= block.timestamp, TimestampInThePast());
+        require(registrationData.timestamp == 0, AlreadyRegistered());
 
         // Store the registration timestamp.
-        registrations[identity] = timestamp;
+        registrationData.eon = eon;
+        registrationData.timestamp = timestamp;
 
         // Emit the IdentityRegistered event.
         emit IdentityRegistered(eon, identityPrefix, msg.sender, timestamp);
