@@ -15,15 +15,15 @@ contract ShutterRegistry is Ownable {
     // Custom error for when a provided timestamp is in the past.
     error TimestampInThePast();
 
-    struct RegsitrationData {
+    struct RegistrationData {
         uint64 eon;
         uint64 timestamp;
     }
     /**
      * @dev Mapping to store registration data for each identity.
-     *      The identity is represented as a `bytes32` hash and mapped to struct RegsitrationData.
+     *      The identity is represented as a `bytes32` hash and mapped to struct RegistrationData.
      */
-    mapping(bytes32 identity => RegsitrationData) public registrations;
+    mapping(bytes32 identity => RegistrationData) public registrations;
 
     /**
      * @dev Emitted when a new identity is successfully registered.
@@ -66,7 +66,7 @@ contract ShutterRegistry is Ownable {
         bytes32 identity = keccak256(
             abi.encodePacked(identityPrefix, msg.sender)
         );
-        RegsitrationData storage registrationData = registrations[identity];
+        RegistrationData storage registrationData = registrations[identity];
         // Ensure the identity is not already registered.
         require(registrationData.timestamp == 0, AlreadyRegistered());
 
