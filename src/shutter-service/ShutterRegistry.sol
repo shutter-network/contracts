@@ -20,8 +20,8 @@ contract ShutterRegistry is Ownable {
         uint64 timestamp;
     }
     /**
-     * @dev Mapping to store registration timestamps for each identity.
-     *      The identity is represented as a `bytes32` hash and mapped to a uint64 timestamp.
+     * @dev Mapping to store registration data for each identity.
+     *      The identity is represented as a `bytes32` hash and mapped to struct RegsitrationData.
      */
     mapping(bytes32 identity => RegsitrationData) public registrations;
 
@@ -45,7 +45,7 @@ contract ShutterRegistry is Ownable {
     constructor() Ownable(msg.sender) {}
 
     /**
-     * @notice Registers a new identity with a specified timestamp.
+     * @notice Registers a new identity with a specified timestamp and eon.
      * @dev The identity is derived by hashing the provided `identityPrefix` concatenated with the sender's address.
      * @param eon The eon associated with the identity.
      * @param identityPrefix The input used to derive the identity hash.
