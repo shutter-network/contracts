@@ -19,5 +19,4 @@ contract Deploy is Script {
         console.log("ShutterRegistry:", address(s));
         return s;
     }
-
 }
