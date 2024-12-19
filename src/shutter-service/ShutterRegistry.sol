@@ -15,6 +15,9 @@ contract ShutterRegistry is Ownable {
     // Custom error for when a provided timestamp is in the past.
     error TimestampInThePast();
 
+    // Custom error for when a identityPrefix provided is empty.
+    error InvalidIdentityPrefix();
+
     struct RegistrationData {
         uint64 eon;
         uint64 timestamp;
@@ -61,6 +64,9 @@ contract ShutterRegistry is Ownable {
     ) external {
         // Ensure the timestamp is not in the past.
         require(timestamp >= block.timestamp, TimestampInThePast());
+
+        // Ensure identityPrefix passed in correct.
+        require(identityPrefix != bytes32(0), InvalidIdentityPrefix());
 
         // Generate the identity hash from the provided prefix and the sender's address.
         bytes32 identity = keccak256(
