@@ -4,7 +4,7 @@ pragma solidity ^0.8.22;
 import "forge-std/Test.sol";
 import "../src/shutter-service/ShutterRegistry.sol";
 
-contract ShutterRegistryTest is Test{
+contract ShutterRegistryTest is Test {
     ShutterRegistry public shutterRegistry;
 
     function setUp() public {
@@ -26,16 +26,11 @@ contract ShutterRegistryTest is Test{
         );
 
         hoax(sender);
-        shutterRegistry.register(
-            eon,
-            identityPrefix,
-            timestamp
-        );
+        shutterRegistry.register(eon, identityPrefix, timestamp);
 
-        bytes32 identity = keccak256(
-            abi.encodePacked(identityPrefix, sender)
-        );
-        (uint64 registeredEon, uint64 registeredTimestamp) = shutterRegistry.registrations(identity);
+        bytes32 identity = keccak256(abi.encodePacked(identityPrefix, sender));
+        (uint64 registeredEon, uint64 registeredTimestamp) = shutterRegistry
+            .registrations(identity);
 
         //verifying registered timestamp
         assertEqUint(registeredEon, eon);
@@ -57,26 +52,18 @@ contract ShutterRegistryTest is Test{
         );
 
         hoax(sender);
-        shutterRegistry.register(
-            eon,
-            identityPrefix,
-            timestamp
-        );
+        shutterRegistry.register(eon, identityPrefix, timestamp);
 
         uint64 newTimestamp = uint64(block.timestamp) + 200;
         vm.expectRevert(ShutterRegistry.AlreadyRegistered.selector);
         hoax(sender);
-        shutterRegistry.register(
-            eon,
-            identityPrefix,
-            newTimestamp
-        );
+        shutterRegistry.register(eon, identityPrefix, newTimestamp);
 
         //verifying registered timestamp
-        bytes32 identity = keccak256(
-            abi.encodePacked(identityPrefix, sender)
+        bytes32 identity = keccak256(abi.encodePacked(identityPrefix, sender));
+        (, uint64 registeredTimestamp) = shutterRegistry.registrations(
+            identity
         );
-        (, uint64 registeredTimestamp) = shutterRegistry.registrations(identity);
         assertEqUint(registeredTimestamp, timestamp);
     }
 
@@ -88,11 +75,7 @@ contract ShutterRegistryTest is Test{
 
         vm.expectRevert(ShutterRegistry.TimestampInThePast.selector);
         hoax(sender);
-        shutterRegistry.register(
-            eon,
-            identityPrefix,
-            timestamp
-        );
+        shutterRegistry.register(eon, identityPrefix, timestamp);
     }
 
     function testMissingIdentity() public {
@@ -104,10 +87,6 @@ contract ShutterRegistryTest is Test{
 
         vm.expectRevert(ShutterRegistry.InvalidIdentityPrefix.selector);
         hoax(sender);
-        shutterRegistry.register(
-            eon,
-            identityPrefix,
-            timestamp
-        );
+        shutterRegistry.register(eon, identityPrefix, timestamp);
     }
 }
