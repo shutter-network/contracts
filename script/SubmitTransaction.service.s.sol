@@ -11,8 +11,7 @@ contract SubmitTransaction is Script {
             vm.envAddress("REGISTRY_ADDRESS")
         );
         uint64 eon = uint64(vm.envUint("EON"));
-        // bytes32 identityPrefix = vm.envBytes32("IDENTITY_PREFIX");
-        bytes32 identityPrefix = "xxnxxx";
+        bytes32 identityPrefix = vm.envBytes32("IDENTITY_PREFIX");
         uint64 ts = uint64(vm.envUint("TIMESTAMP"));
 
         vm.startBroadcast(privateKey);
