@@ -13,6 +13,7 @@ contract Deploy is Script {
     ) public returns (KeyperSetManager) {
         KeyperSetManager ksm = new KeyperSetManager(deployerAddress);
         ksm.initialize(deployerAddress, deployerAddress);
+        console.log("keyper set manager initialised");
 
         // add bootstrap keyper set
         KeyperSet fakeKeyperset = new KeyperSet();
