@@ -8,6 +8,7 @@ CONTRACTS=(
     "EonKeyPublish"
     "KeyBroadcastContract"
     "Inbox"
+    "ShutterRegistry"
 )
 OUTPUT_DIR="bindings"
 PACKAGE_NAME="bindings"

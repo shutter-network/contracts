@@ -4,3 +4,4 @@ gnoshcontracts/
 shopcontracts/
 out/
 .tool-versions
+.env
