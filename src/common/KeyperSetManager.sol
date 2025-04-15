@@ -14,7 +14,9 @@ contract KeyperSetManager is RestrictedPausable, IKeyperSetManager {
         address contractAddress;
     }
 
-    constructor(address initializer) RestrictedPausable(initializer) {}
+    constructor(address initializer) RestrictedPausable(initializer) {
+        initialize(msg.sender, msg.sender);
+    }
 
     KeyperSetData[] private keyperSets;
 
