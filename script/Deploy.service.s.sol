@@ -6,6 +6,8 @@ import "../src/common/KeyBroadcastContract.sol";
 import "../src/common/KeyperSet.sol";
 import "../src/common/KeyperSetManager.sol";
 import "../src/shutter-service/ShutterRegistry.sol";
+import "../src/shutter-service/ShutterEventTriggerRegistry.sol";
+import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 
 contract Deploy is Script {
     function deployKeyperSetManager(
@@ -38,6 +40,17 @@ contract Deploy is Script {
         return s;
     }
 
+    function deployEventTriggerRegistry()
+        public
+        returns (ShutterEventTriggerRegistryV1)
+    {
+        address proxy = Upgrades.deployUUPSProxy(
+            "ShutterEventTriggerRegistry.sol:ShutterEventTriggerRegistryV1",
+            abi.encodeCall(ShutterEventTriggerRegistryV1.initialize, ())
+        );
+        return ShutterEventTriggerRegistryV1(proxy);
+    }
+
     function run() external {
         uint256 deployKey = vm.envUint("DEPLOY_KEY");
         address deployerAddress = vm.addr(deployKey);
@@ -47,6 +60,7 @@ contract Deploy is Script {
         KeyperSetManager ksm = deployKeyperSetManager(deployerAddress);
         deployKeyBroadcastContract(ksm);
         deployRegistry();
+        deployEventTriggerRegistry();
 
         vm.stopBroadcast();
     }
