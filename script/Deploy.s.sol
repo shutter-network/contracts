@@ -114,7 +114,7 @@ contract DeployScript is Script {
         keyperSetManager.addKeyperSet(0, address(fakeKeyperset));
         console.log(
             "Initial fake KeyperSet added to KeyperSetManager with activation block:",
-            0
+            uint256(0)
         );
 
         address[] memory keypers = vm.envAddress("KEYPER_ADDRESSES", ",");
