@@ -1,25 +1,39 @@
 #!/bin/bash
 
+set -Eeuo pipefail
+
 CONTRACTS=(
-    "Sequencer"
-    "ValidatorRegistry"
-    "KeyperSetManager"
-    "KeyperSet"
-    "EonKeyPublish"
-    "KeyBroadcastContract"
-    "Inbox"
-    "ShutterRegistry"
+    "src/gnosh/Sequencer.sol:Sequencer"
+    "src/gnosh/ValidatorRegistry.sol:ValidatorRegistry"
+    "src/common/KeyperSetManager.sol:KeyperSetManager"
+    "src/common/KeyperSet.sol:KeyperSet"
+    "src/common/EonKeyPublish.sol:EonKeyPublish"
+    "src/common/KeyBroadcastContract.sol:KeyBroadcastContract"
+    "src/shop/Inbox.sol:Inbox"
+    "src/shutter-service/ShutterRegistry.sol:ShutterRegistry"
+    "src/shutter-service/ShutterEventTriggerRegistry.sol:ShutterEventTriggerRegistryV1"
+    "src/shutter-service/EventTriggerTestHelper.sol:EventTriggerTestHelper"
 )
 OUTPUT_DIR="bindings"
-PACKAGE_NAME="bindings"
 
 mkdir -p "$OUTPUT_DIR"
 
 forge build
 
-for contract in "${CONTRACTS[@]}"; do
-    pkg=$(echo "$contract" | tr '[:upper:]' '[:lower:]')
+for contract_entry in "${CONTRACTS[@]}"; do
+    contract_path="${contract_entry%%:*}"
+    contract_name="${contract_entry##*:}"
+
+    pkg=$(echo "$contract_name" | tr '[:upper:]' '[:lower:]')
     d="${OUTPUT_DIR}/${pkg}"
     mkdir -p "${d}"
-    abigen --abi <(jq '.["abi"]' "out/${contract}.sol/${contract}.json") --pkg "${pkg}" --out "${d}/${pkg}.go"
+
+    contract_file=$(basename "$contract_path")
+    out_path="out/${contract_file}/${contract_name}.json"
+
+    abigen  \
+        --abi <(jq -c '.abi' "$out_path")  \
+        --bin <(jq -r '.bytecode.object' "$out_path")  \
+        --pkg "${pkg}"  \
+        --out "${d}/${pkg}.go"
 done
