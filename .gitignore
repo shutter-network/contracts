@@ -6,3 +6,4 @@ out/
 broadcast/
 .tool-versions
 .env
+.vscode

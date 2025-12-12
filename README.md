@@ -16,6 +16,21 @@ There are some helper scripts (deployment, executing special contract methods, .
 
 **TODO: Add information for the involved scripts.**
 
+## Docker
+
+A Foundry-based (forge/cast/anvil) image is available via the included `Dockerfile` (pinned to `ghcr.io/foundry-rs/foundry:v1.5.0`).
+
+Build the image:
+
+    docker build -t shutter-contracts .
+
+Execute scripts by supplying your RPC URL and key:
+
+    docker run --rm -it -v "$(pwd)":/app --env RPC_URL=https://... --env PRIVATE_KEY=0x... \
+      shutter-contracts script script/Deploy.s.sol --rpc-url "$RPC_URL" --broadcast --private-key "$PRIVATE_KEY"
+
+Override the entrypoint if you need `cast`, `anvil`, or other tooling, for example `docker run --entrypoint cast ...`.
+
 ## Tests
 
 To manually run the tests, execute
