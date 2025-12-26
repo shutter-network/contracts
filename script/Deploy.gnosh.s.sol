@@ -13,6 +13,8 @@ contract Deploy is Script {
         address deployerAddress
     ) public returns (KeyperSetManager) {
         KeyperSetManager ksm = new KeyperSetManager(deployerAddress);
+        // otherwise we're not authorized:
+        ksm.initialize(deployerAddress, deployerAddress);
 
         // add bootstrap keyper set
         KeyperSet fakeKeyperset = new KeyperSet();
