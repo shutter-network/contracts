@@ -18,6 +18,7 @@ contract DKGContract {
     error AlreadySucceeded();
     error EmptyAccusation();
     error MismatchedArrays();
+    error AlreadyVoted();
 
     event DealingSubmitted(
         uint64 indexed keyperSetIndex,
@@ -39,6 +40,17 @@ contract DKGContract {
         uint64[] accuserIndices,
         bytes[] polyEvalData
     );
+    event SuccessVoteSubmitted(
+        uint64 indexed keyperSetIndex,
+        uint64 indexed retryCounter,
+        uint64 indexed keyperIndex,
+        bytes eonPublicKey
+    );
+    event DKGSucceeded(
+        uint64 indexed keyperSetIndex,
+        uint64 indexed retryCounter,
+        bytes eonPublicKey
+    );
 
     uint64 public immutable PHASE_LENGTH;
     uint64 public immutable DKG_LEAD_LENGTH;
@@ -49,6 +61,10 @@ contract DKGContract {
     // success-vote threshold. Never reset — gates the success-triggering logic
     // in submitSuccessVote.
     mapping(uint64 => bool) public succeeded;
+    mapping(uint64 => mapping(uint64 => mapping(bytes32 => uint64)))
+        public voteCount;
+    mapping(uint64 => mapping(uint64 => mapping(address => bool)))
+        public hasVoted;
 
     constructor(
         uint64 phaseLength,
@@ -186,5 +202,53 @@ contract DKGContract {
             accuserIndices,
             polyEvalData
         );
+    }
+
+    function submitSuccessVote(
+        uint64 keyperSetIndex,
+        uint64 retryCounter,
+        uint64 keyperIndex,
+        bytes calldata eonPublicKey
+    ) external {
+        _requirePhase(keyperSetIndex, retryCounter, Phase.Finalizing);
+        _checkMember(keyperSetIndex, keyperIndex);
+        if (hasVoted[keyperSetIndex][retryCounter][msg.sender]) {
+            revert AlreadyVoted();
+        }
+        hasVoted[keyperSetIndex][retryCounter][msg.sender] = true;
+
+        bytes32 keyHash = keccak256(eonPublicKey);
+        uint64 newCount = voteCount[keyperSetIndex][retryCounter][keyHash] + 1;
+        voteCount[keyperSetIndex][retryCounter][keyHash] = newCount;
+
+        emit SuccessVoteSubmitted(
+            keyperSetIndex,
+            retryCounter,
+            keyperIndex,
+            eonPublicKey
+        );
+
+        // Late-arriving votes within the Finalizing window are accepted and
+        // emit the event above, but do not re-trigger success once it has
+        // already been recorded.
+        if (!succeeded[keyperSetIndex]) {
+            address keyperSetAddress = keyperSetManager.getKeyperSetAddress(
+                keyperSetIndex
+            );
+            uint64 threshold = KeyperSet(keyperSetAddress).getThreshold();
+            if (newCount >= threshold) {
+                succeeded[keyperSetIndex] = true;
+                // Errors are intentionally swallowed: if the key has already
+                // been broadcast (or the publisher is not authorized), the DKG
+                // outcome is still considered successful.
+                try
+                    keyBroadcastContract.broadcastEonKey(
+                        keyperSetIndex,
+                        eonPublicKey
+                    )
+                {} catch {}
+                emit DKGSucceeded(keyperSetIndex, retryCounter, eonPublicKey);
+            }
+        }
     }
 }

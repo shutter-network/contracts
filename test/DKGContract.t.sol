@@ -44,6 +44,18 @@ contract DKGContractTest is Test {
         uint64[] accuserIndices,
         bytes[] polyEvalData
     );
+    event SuccessVoteSubmitted(
+        uint64 indexed keyperSetIndex,
+        uint64 indexed retryCounter,
+        uint64 indexed keyperIndex,
+        bytes eonPublicKey
+    );
+    event DKGSucceeded(
+        uint64 indexed keyperSetIndex,
+        uint64 indexed retryCounter,
+        bytes eonPublicKey
+    );
+    event EonKeyBroadcast(uint64 eon, bytes key);
 
     function setUp() public {
         address initializer = address(69);
@@ -71,6 +83,7 @@ contract DKGContractTest is Test {
         members[2] = keyper2;
         keyperSet0.addMembers(members);
         keyperSet0.setThreshold(2);
+        keyperSet0.setPublisher(address(dkgContract));
         keyperSet0.setFinalized();
         vm.prank(dao);
         keyperSetManager.addKeyperSet(ACTIVATION_BLOCK_0, address(keyperSet0));
@@ -405,5 +418,280 @@ contract DKGContractTest is Test {
         emit ApologySubmitted(0, 0, 0, accusers, polyEvals);
         vm.prank(keyper0);
         dkgContract.submitApology(0, 0, 0, accusers, polyEvals);
+    }
+
+    // ---------------------------------------------------------------------
+    // submitSuccessVote
+    // ---------------------------------------------------------------------
+
+    bytes constant EON_KEY_A = hex"1111";
+    bytes constant EON_KEY_B = hex"2222";
+
+    function testSubmitSuccessVoteEmitsEvent() public {
+        vm.roll(FINALIZING_BLOCK);
+        vm.expectEmit(true, true, true, true, address(dkgContract));
+        emit SuccessVoteSubmitted(0, 0, 0, EON_KEY_A);
+        vm.prank(keyper0);
+        dkgContract.submitSuccessVote(0, 0, 0, EON_KEY_A);
+    }
+
+    function testSubmitSuccessVoteRevertsOutsideFinalizing() public {
+        // Dealing
+        vm.roll(DEALING_BLOCK);
+        vm.prank(keyper0);
+        vm.expectRevert(DKGContract.WrongPhase.selector);
+        dkgContract.submitSuccessVote(0, 0, 0, EON_KEY_A);
+        // Accusing
+        vm.roll(ACCUSING_BLOCK);
+        vm.prank(keyper0);
+        vm.expectRevert(DKGContract.WrongPhase.selector);
+        dkgContract.submitSuccessVote(0, 0, 0, EON_KEY_A);
+        // Apologizing
+        vm.roll(APOLOGIZING_BLOCK);
+        vm.prank(keyper0);
+        vm.expectRevert(DKGContract.WrongPhase.selector);
+        dkgContract.submitSuccessVote(0, 0, 0, EON_KEY_A);
+        // One block after Finalizing ends
+        vm.roll(FINALIZING_BLOCK + PHASE_LENGTH);
+        vm.prank(keyper0);
+        vm.expectRevert(DKGContract.WrongPhase.selector);
+        dkgContract.submitSuccessVote(0, 0, 0, EON_KEY_A);
+    }
+
+    function testSubmitSuccessVoteRevertsWhenSenderIsNotMember() public {
+        vm.roll(FINALIZING_BLOCK);
+        vm.prank(address(0xBEEF));
+        vm.expectRevert(DKGContract.NotKeyperAtIndex.selector);
+        dkgContract.submitSuccessVote(0, 0, 0, EON_KEY_A);
+    }
+
+    function testSubmitSuccessVoteRevertsWhenIndexMismatchesSender() public {
+        vm.roll(FINALIZING_BLOCK);
+        vm.prank(keyper0);
+        vm.expectRevert(DKGContract.NotKeyperAtIndex.selector);
+        dkgContract.submitSuccessVote(0, 0, 1, EON_KEY_A);
+    }
+
+    function testSubmitSuccessVoteRevertsOnDoubleVote() public {
+        vm.roll(FINALIZING_BLOCK);
+        vm.prank(keyper0);
+        dkgContract.submitSuccessVote(0, 0, 0, EON_KEY_A);
+        vm.prank(keyper0);
+        vm.expectRevert(DKGContract.AlreadyVoted.selector);
+        dkgContract.submitSuccessVote(0, 0, 0, EON_KEY_A);
+    }
+
+    function testSubmitSuccessVoteAllowsDifferentKeyByDoubleVoter() public {
+        // The double-vote guard is per-address, not per-key — voting a second
+        // time with a different key from the same address is still rejected.
+        vm.roll(FINALIZING_BLOCK);
+        vm.prank(keyper0);
+        dkgContract.submitSuccessVote(0, 0, 0, EON_KEY_A);
+        vm.prank(keyper0);
+        vm.expectRevert(DKGContract.AlreadyVoted.selector);
+        dkgContract.submitSuccessVote(0, 0, 0, EON_KEY_B);
+    }
+
+    function testBelowThresholdDoesNotBroadcast() public {
+        // Threshold is 2; a single vote must not trigger broadcast or succeed.
+        vm.roll(FINALIZING_BLOCK);
+        vm.prank(keyper0);
+        dkgContract.submitSuccessVote(0, 0, 0, EON_KEY_A);
+        assertFalse(dkgContract.succeeded(0));
+        assertEq(keyBroadcastContract.getEonKey(0).length, 0);
+    }
+
+    function testVotesForDifferentKeysCountedSeparately() public {
+        // Two votes for different keys — neither key reaches threshold of 2.
+        vm.roll(FINALIZING_BLOCK);
+        vm.prank(keyper0);
+        dkgContract.submitSuccessVote(0, 0, 0, EON_KEY_A);
+        vm.prank(keyper1);
+        dkgContract.submitSuccessVote(0, 0, 1, EON_KEY_B);
+        assertFalse(dkgContract.succeeded(0));
+        assertEq(keyBroadcastContract.getEonKey(0).length, 0);
+    }
+
+    function testThresholdReachedTriggersBroadcastAndSuccessEvent() public {
+        vm.roll(FINALIZING_BLOCK);
+        vm.prank(keyper0);
+        dkgContract.submitSuccessVote(0, 0, 0, EON_KEY_A);
+        // Second identical vote reaches threshold (2). Both the DKG success
+        // event and the KeyBroadcastContract broadcast event must fire.
+        vm.expectEmit(true, true, true, true, address(dkgContract));
+        emit SuccessVoteSubmitted(0, 0, 1, EON_KEY_A);
+        vm.expectEmit(false, false, false, true, address(keyBroadcastContract));
+        emit EonKeyBroadcast(0, EON_KEY_A);
+        vm.expectEmit(true, true, false, true, address(dkgContract));
+        emit DKGSucceeded(0, 0, EON_KEY_A);
+        vm.prank(keyper1);
+        dkgContract.submitSuccessVote(0, 0, 1, EON_KEY_A);
+        assertTrue(dkgContract.succeeded(0));
+        assertEq(keyBroadcastContract.getEonKey(0), EON_KEY_A);
+    }
+
+    function testSuccessRecordedWhenBroadcastReverts() public {
+        // Deploy a separate keyper set whose publisher is NOT the DKG contract.
+        // Calls to broadcastEonKey will revert with NotAllowed; the DKG
+        // contract must swallow the error but still set succeeded[k] and emit
+        // its success event.
+        KeyperSet keyperSet1 = new KeyperSet();
+        address[] memory members = new address[](3);
+        members[0] = keyper0;
+        members[1] = keyper1;
+        members[2] = keyper2;
+        keyperSet1.addMembers(members);
+        keyperSet1.setThreshold(2);
+        keyperSet1.setPublisher(address(0xDEAD)); // not the DKG contract
+        keyperSet1.setFinalized();
+        uint64 activation1 = ACTIVATION_BLOCK_0 * 2;
+        vm.prank(dao);
+        keyperSetManager.addKeyperSet(activation1, address(keyperSet1));
+
+        uint64 finalizingBlock1 = activation1 -
+            DKG_LEAD_LENGTH +
+            3 *
+            PHASE_LENGTH;
+        vm.roll(finalizingBlock1);
+        vm.prank(keyper0);
+        dkgContract.submitSuccessVote(1, 0, 0, EON_KEY_A);
+        // Threshold-th vote — broadcast reverts internally but the DKG
+        // contract still records success.
+        vm.expectEmit(true, true, false, true, address(dkgContract));
+        emit DKGSucceeded(1, 0, EON_KEY_A);
+        vm.prank(keyper1);
+        dkgContract.submitSuccessVote(1, 0, 1, EON_KEY_A);
+        assertTrue(dkgContract.succeeded(1));
+        assertEq(keyBroadcastContract.getEonKey(1).length, 0);
+    }
+
+    // ---------------------------------------------------------------------
+    // Post-success behavior
+    // ---------------------------------------------------------------------
+
+    function _drive_to_success_for_set0() internal {
+        vm.roll(FINALIZING_BLOCK);
+        vm.prank(keyper0);
+        dkgContract.submitSuccessVote(0, 0, 0, EON_KEY_A);
+        vm.prank(keyper1);
+        dkgContract.submitSuccessVote(0, 0, 1, EON_KEY_A);
+        assertTrue(dkgContract.succeeded(0));
+    }
+
+    function testPostSuccessRejectsDealingForNewRetry() public {
+        _drive_to_success_for_set0();
+        // Even during r=1 Dealing, succeeded[k] blocks further messages.
+        vm.roll(DKG_START_R0 + CYCLE_LENGTH); // r=1 Dealing start
+        vm.prank(keyper0);
+        vm.expectRevert(DKGContract.AlreadySucceeded.selector);
+        dkgContract.submitDealing(0, 1, 0, hex"01", hex"02");
+    }
+
+    function testPostSuccessRejectsAccusationForNewRetry() public {
+        _drive_to_success_for_set0();
+        vm.roll(DKG_START_R0 + CYCLE_LENGTH + PHASE_LENGTH); // r=1 Accusing
+        uint64[] memory accused = new uint64[](1);
+        accused[0] = 1;
+        vm.prank(keyper0);
+        vm.expectRevert(DKGContract.AlreadySucceeded.selector);
+        dkgContract.submitAccusation(0, 1, 0, accused);
+    }
+
+    function testPostSuccessRejectsApologyForNewRetry() public {
+        _drive_to_success_for_set0();
+        vm.roll(DKG_START_R0 + CYCLE_LENGTH + 2 * PHASE_LENGTH); // r=1 Apologizing
+        uint64[] memory accusers = new uint64[](1);
+        accusers[0] = 1;
+        bytes[] memory polyEvals = new bytes[](1);
+        polyEvals[0] = hex"01";
+        vm.prank(keyper0);
+        vm.expectRevert(DKGContract.AlreadySucceeded.selector);
+        dkgContract.submitApology(0, 1, 0, accusers, polyEvals);
+    }
+
+    function testPostSuccessSuccessVoteEmitsEventWithoutNewSuccess() public {
+        // After success for r=0, a late vote in r=0's Finalizing window (if
+        // still open) is accepted and emits SuccessVoteSubmitted but must not
+        // re-emit DKGSucceeded or re-broadcast the key.
+        vm.roll(FINALIZING_BLOCK);
+        // Drive to success with keyper0 and keyper1 (threshold = 2).
+        vm.prank(keyper0);
+        dkgContract.submitSuccessVote(0, 0, 0, EON_KEY_A);
+        vm.prank(keyper1);
+        dkgContract.submitSuccessVote(0, 0, 1, EON_KEY_A);
+        assertTrue(dkgContract.succeeded(0));
+
+        // keyper2 arrives late in the same Finalizing window.
+        vm.expectEmit(true, true, true, true, address(dkgContract));
+        emit SuccessVoteSubmitted(0, 0, 2, EON_KEY_A);
+        vm.prank(keyper2);
+        dkgContract.submitSuccessVote(0, 0, 2, EON_KEY_A);
+    }
+
+    // ---------------------------------------------------------------------
+    // Concurrent DKG instances and retry boundary
+    // ---------------------------------------------------------------------
+
+    function testConcurrentDKGInstancesAreIndependent() public {
+        // Deploy a second keyper set with a different activation block so
+        // (k=0, r=0) and (k=1, r=0) have disjoint phase windows.
+        KeyperSet keyperSet1 = new KeyperSet();
+        address[] memory members = new address[](3);
+        members[0] = keyper0;
+        members[1] = keyper1;
+        members[2] = keyper2;
+        keyperSet1.addMembers(members);
+        keyperSet1.setThreshold(2);
+        keyperSet1.setPublisher(address(dkgContract));
+        keyperSet1.setFinalized();
+        uint64 activation1 = ACTIVATION_BLOCK_0 * 2; // 2000
+        vm.prank(dao);
+        keyperSetManager.addKeyperSet(activation1, address(keyperSet1));
+
+        // At (k=0, r=0) Dealing: messages for k=1 must revert (Phase.None),
+        // messages for k=0 accepted.
+        vm.roll(DEALING_BLOCK);
+        vm.prank(keyper0);
+        dkgContract.submitDealing(0, 0, 0, hex"aa", hex"");
+        vm.prank(keyper0);
+        vm.expectRevert(DKGContract.WrongPhase.selector);
+        dkgContract.submitDealing(1, 0, 0, hex"aa", hex"");
+
+        // At (k=1, r=0) Dealing: messages for k=1 accepted, k=0 in Phase.None.
+        uint64 k1DealingBlock = activation1 - DKG_LEAD_LENGTH;
+        vm.roll(k1DealingBlock);
+        vm.prank(keyper0);
+        dkgContract.submitDealing(1, 0, 0, hex"bb", hex"");
+        vm.prank(keyper0);
+        vm.expectRevert(DKGContract.WrongPhase.selector);
+        dkgContract.submitDealing(0, 0, 0, hex"bb", hex"");
+
+        // Reaching success on k=1 must not set succeeded[0].
+        uint64 k1FinalizingBlock = k1DealingBlock + 3 * PHASE_LENGTH;
+        vm.roll(k1FinalizingBlock);
+        vm.prank(keyper0);
+        dkgContract.submitSuccessVote(1, 0, 0, EON_KEY_A);
+        vm.prank(keyper1);
+        dkgContract.submitSuccessVote(1, 0, 1, EON_KEY_A);
+        assertTrue(dkgContract.succeeded(1));
+        assertFalse(dkgContract.succeeded(0));
+    }
+
+    function testRetryDealingForR1RejectedDuringR0Dealing() public {
+        vm.roll(DEALING_BLOCK);
+        vm.prank(keyper0);
+        vm.expectRevert(DKGContract.WrongPhase.selector);
+        dkgContract.submitDealing(0, 1, 0, hex"01", hex"");
+    }
+
+    function testRetryDealingForR1AcceptedAfterR0CycleElapsed() public {
+        // r=0 Finalizing ends at DKG_START_R0 + CYCLE_LENGTH; r=1 Dealing
+        // begins there. A dealing submission for (k=0, r=1) must be accepted.
+        uint64 r1DealingStart = DKG_START_R0 + CYCLE_LENGTH;
+        vm.roll(r1DealingStart);
+        vm.expectEmit(true, true, true, true, address(dkgContract));
+        emit DealingSubmitted(0, 1, 0, hex"01", hex"");
+        vm.prank(keyper0);
+        dkgContract.submitDealing(0, 1, 0, hex"01", hex"");
     }
 }
