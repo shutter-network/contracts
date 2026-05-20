@@ -2,6 +2,8 @@
 pragma solidity ^0.8.20;
 
 import "forge-std/Script.sol";
+import "../src/common/DKGContract.sol";
+import "../src/common/ECIESKeyRegistry.sol";
 import "../src/common/KeyBroadcastContract.sol";
 import "../src/common/KeyperSet.sol";
 import "../src/common/KeyperSetManager.sol";
@@ -34,6 +36,32 @@ contract Deploy is Script {
         return kbc;
     }
 
+    function deployDKGContract(
+        KeyperSetManager ksm,
+        KeyBroadcastContract kbc
+    ) public returns (DKGContract) {
+        uint64 phaseLength = uint64(vm.envOr("DKG_PHASE_LENGTH", uint256(10)));
+        uint64 dkgLeadLength = uint64(
+            vm.envOr("DKG_LEAD_LENGTH", uint256(40))
+        );
+        DKGContract dkg = new DKGContract(
+            phaseLength,
+            dkgLeadLength,
+            address(ksm),
+            address(kbc)
+        );
+        console.log("DKGContract:", address(dkg));
+        return dkg;
+    }
+
+    function deployECIESKeyRegistry(
+        KeyperSetManager ksm
+    ) public returns (ECIESKeyRegistry) {
+        ECIESKeyRegistry registry = new ECIESKeyRegistry(address(ksm));
+        console.log("ECIESKeyRegistry:", address(registry));
+        return registry;
+    }
+
     function deployRegistry() public returns (ShutterRegistry) {
         ShutterRegistry s = new ShutterRegistry();
         console.log("Registry:", address(s));
@@ -58,7 +86,9 @@ contract Deploy is Script {
         vm.startBroadcast(deployKey);
 
         KeyperSetManager ksm = deployKeyperSetManager(deployerAddress);
-        deployKeyBroadcastContract(ksm);
+        KeyBroadcastContract kbc = deployKeyBroadcastContract(ksm);
+        deployDKGContract(ksm, kbc);
+        deployECIESKeyRegistry(ksm);
         deployRegistry();
         deployEventTriggerRegistry();
 
