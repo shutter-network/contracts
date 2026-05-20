@@ -25,7 +25,7 @@ contract DKGContract {
         uint64 indexed retryCounter,
         uint64 indexed keyperIndex,
         bytes commitment,
-        bytes polyEval
+        bytes[] polyEvals
     );
     event AccusationSubmitted(
         uint64 indexed keyperSetIndex,
@@ -146,7 +146,7 @@ contract DKGContract {
         uint64 retryCounter,
         uint64 keyperIndex,
         bytes calldata commitment,
-        bytes calldata polyEval
+        bytes[] calldata polyEvals
     ) external {
         _requireNotSucceeded(keyperSetIndex);
         _requirePhase(keyperSetIndex, retryCounter, Phase.Dealing);
@@ -156,7 +156,7 @@ contract DKGContract {
             retryCounter,
             keyperIndex,
             commitment,
-            polyEval
+            polyEvals
         );
     }
 

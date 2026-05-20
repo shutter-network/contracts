@@ -29,7 +29,7 @@ contract DKGContractTest is Test {
         uint64 indexed retryCounter,
         uint64 indexed keyperIndex,
         bytes commitment,
-        bytes polyEval
+        bytes[] polyEvals
     );
     event AccusationSubmitted(
         uint64 indexed keyperSetIndex,
@@ -263,46 +263,53 @@ contract DKGContractTest is Test {
     function testSubmitDealingEmitsEvent() public {
         vm.roll(DEALING_BLOCK);
         bytes memory commitment = hex"deadbeef";
-        bytes memory polyEval = hex"cafe";
+        bytes[] memory polyEvals = new bytes[](2);
+        polyEvals[0] = hex"cafe";
+        polyEvals[1] = hex"f00d";
         vm.expectEmit(true, true, true, true, address(dkgContract));
-        emit DealingSubmitted(0, 0, 0, commitment, polyEval);
+        emit DealingSubmitted(0, 0, 0, commitment, polyEvals);
         vm.prank(keyper0);
-        dkgContract.submitDealing(0, 0, 0, commitment, polyEval);
+        dkgContract.submitDealing(0, 0, 0, commitment, polyEvals);
     }
 
     function testSubmitDealingRevertsOutsideDealing() public {
         bytes memory commitment = hex"01";
-        bytes memory polyEval = hex"02";
+        bytes[] memory polyEvals = new bytes[](1);
+        polyEvals[0] = hex"02";
         // Accusing
         vm.roll(ACCUSING_BLOCK);
         vm.prank(keyper0);
         vm.expectRevert(DKGContract.WrongPhase.selector);
-        dkgContract.submitDealing(0, 0, 0, commitment, polyEval);
+        dkgContract.submitDealing(0, 0, 0, commitment, polyEvals);
         // One block before Dealing starts
         vm.roll(DEALING_BLOCK - 1);
         vm.prank(keyper0);
         vm.expectRevert(DKGContract.WrongPhase.selector);
-        dkgContract.submitDealing(0, 0, 0, commitment, polyEval);
+        dkgContract.submitDealing(0, 0, 0, commitment, polyEvals);
         // One block after Dealing ends
         vm.roll(DEALING_BLOCK + PHASE_LENGTH);
         vm.prank(keyper0);
         vm.expectRevert(DKGContract.WrongPhase.selector);
-        dkgContract.submitDealing(0, 0, 0, commitment, polyEval);
+        dkgContract.submitDealing(0, 0, 0, commitment, polyEvals);
     }
 
     function testSubmitDealingRevertsWhenSenderIsNotMember() public {
         vm.roll(DEALING_BLOCK);
+        bytes[] memory polyEvals = new bytes[](1);
+        polyEvals[0] = hex"02";
         vm.prank(address(0xBEEF));
         vm.expectRevert(DKGContract.NotKeyperAtIndex.selector);
-        dkgContract.submitDealing(0, 0, 0, hex"01", hex"02");
+        dkgContract.submitDealing(0, 0, 0, hex"01", polyEvals);
     }
 
     function testSubmitDealingRevertsWhenIndexMismatchesSender() public {
         vm.roll(DEALING_BLOCK);
+        bytes[] memory polyEvals = new bytes[](1);
+        polyEvals[0] = hex"02";
         // keyper0 is at index 0; passing index 1 should be rejected.
         vm.prank(keyper0);
         vm.expectRevert(DKGContract.NotKeyperAtIndex.selector);
-        dkgContract.submitDealing(0, 0, 1, hex"01", hex"02");
+        dkgContract.submitDealing(0, 0, 1, hex"01", polyEvals);
     }
 
     // submitAccusation
@@ -582,9 +589,11 @@ contract DKGContractTest is Test {
         _drive_to_success_for_set0();
         // Even during r=1 Dealing, succeeded[k] blocks further messages.
         vm.roll(DKG_START_R0 + CYCLE_LENGTH); // r=1 Dealing start
+        bytes[] memory polyEvals = new bytes[](1);
+        polyEvals[0] = hex"02";
         vm.prank(keyper0);
         vm.expectRevert(DKGContract.AlreadySucceeded.selector);
-        dkgContract.submitDealing(0, 1, 0, hex"01", hex"02");
+        dkgContract.submitDealing(0, 1, 0, hex"01", polyEvals);
     }
 
     function testPostSuccessRejectsAccusationForNewRetry() public {
@@ -650,21 +659,22 @@ contract DKGContractTest is Test {
 
         // At (k=0, r=0) Dealing: messages for k=1 must revert (Phase.None),
         // messages for k=0 accepted.
+        bytes[] memory emptyEvals = new bytes[](0);
         vm.roll(DEALING_BLOCK);
         vm.prank(keyper0);
-        dkgContract.submitDealing(0, 0, 0, hex"aa", hex"");
+        dkgContract.submitDealing(0, 0, 0, hex"aa", emptyEvals);
         vm.prank(keyper0);
         vm.expectRevert(DKGContract.WrongPhase.selector);
-        dkgContract.submitDealing(1, 0, 0, hex"aa", hex"");
+        dkgContract.submitDealing(1, 0, 0, hex"aa", emptyEvals);
 
         // At (k=1, r=0) Dealing: messages for k=1 accepted, k=0 in Phase.None.
         uint64 k1DealingBlock = activation1 - DKG_LEAD_LENGTH;
         vm.roll(k1DealingBlock);
         vm.prank(keyper0);
-        dkgContract.submitDealing(1, 0, 0, hex"bb", hex"");
+        dkgContract.submitDealing(1, 0, 0, hex"bb", emptyEvals);
         vm.prank(keyper0);
         vm.expectRevert(DKGContract.WrongPhase.selector);
-        dkgContract.submitDealing(0, 0, 0, hex"bb", hex"");
+        dkgContract.submitDealing(0, 0, 0, hex"bb", emptyEvals);
 
         // Reaching success on k=1 must not set succeeded[0].
         uint64 k1FinalizingBlock = k1DealingBlock + 3 * PHASE_LENGTH;
@@ -679,19 +689,21 @@ contract DKGContractTest is Test {
 
     function testRetryDealingForR1RejectedDuringR0Dealing() public {
         vm.roll(DEALING_BLOCK);
+        bytes[] memory emptyEvals = new bytes[](0);
         vm.prank(keyper0);
         vm.expectRevert(DKGContract.WrongPhase.selector);
-        dkgContract.submitDealing(0, 1, 0, hex"01", hex"");
+        dkgContract.submitDealing(0, 1, 0, hex"01", emptyEvals);
     }
 
     function testRetryDealingForR1AcceptedAfterR0CycleElapsed() public {
         // r=0 Finalizing ends at DKG_START_R0 + CYCLE_LENGTH; r=1 Dealing
         // begins there. A dealing submission for (k=0, r=1) must be accepted.
         uint64 r1DealingStart = DKG_START_R0 + CYCLE_LENGTH;
+        bytes[] memory emptyEvals = new bytes[](0);
         vm.roll(r1DealingStart);
         vm.expectEmit(true, true, true, true, address(dkgContract));
-        emit DealingSubmitted(0, 1, 0, hex"01", hex"");
+        emit DealingSubmitted(0, 1, 0, hex"01", emptyEvals);
         vm.prank(keyper0);
-        dkgContract.submitDealing(0, 1, 0, hex"01", hex"");
+        dkgContract.submitDealing(0, 1, 0, hex"01", emptyEvals);
     }
 }
