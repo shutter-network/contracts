@@ -23,6 +23,28 @@ contract DKGContractTest is Test {
     address keyper1 = address(0xA1);
     address keyper2 = address(0xA2);
 
+    // Event signatures mirrored from DKGContract for vm.expectEmit usage.
+    event DealingSubmitted(
+        uint64 indexed keyperSetIndex,
+        uint64 indexed retryCounter,
+        uint64 indexed keyperIndex,
+        bytes commitment,
+        bytes polyEval
+    );
+    event AccusationSubmitted(
+        uint64 indexed keyperSetIndex,
+        uint64 indexed retryCounter,
+        uint64 indexed keyperIndex,
+        uint64[] accusedIndices
+    );
+    event ApologySubmitted(
+        uint64 indexed keyperSetIndex,
+        uint64 indexed retryCounter,
+        uint64 indexed keyperIndex,
+        uint64[] accuserIndices,
+        bytes[] polyEvalData
+    );
+
     function setUp() public {
         address initializer = address(69);
         address sequencer = address(420);
@@ -212,5 +234,176 @@ contract DKGContractTest is Test {
             address(keyBroadcastContract)
         );
         assertEq(dkg.dkgStart(0, 0), int256(-1000));
+    }
+
+    // ---------------------------------------------------------------------
+    // Bulletin-board message tests
+    // ---------------------------------------------------------------------
+
+    uint64 constant DEALING_BLOCK = ACTIVATION_BLOCK_0 - DKG_LEAD_LENGTH; // 960
+    uint64 constant ACCUSING_BLOCK = DEALING_BLOCK + PHASE_LENGTH; // 970
+    uint64 constant APOLOGIZING_BLOCK = DEALING_BLOCK + 2 * PHASE_LENGTH; // 980
+    uint64 constant FINALIZING_BLOCK = DEALING_BLOCK + 3 * PHASE_LENGTH; // 990
+
+    // submitDealing
+
+    function testSubmitDealingEmitsEvent() public {
+        vm.roll(DEALING_BLOCK);
+        bytes memory commitment = hex"deadbeef";
+        bytes memory polyEval = hex"cafe";
+        vm.expectEmit(true, true, true, true, address(dkgContract));
+        emit DealingSubmitted(0, 0, 0, commitment, polyEval);
+        vm.prank(keyper0);
+        dkgContract.submitDealing(0, 0, 0, commitment, polyEval);
+    }
+
+    function testSubmitDealingRevertsOutsideDealing() public {
+        bytes memory commitment = hex"01";
+        bytes memory polyEval = hex"02";
+        // Accusing
+        vm.roll(ACCUSING_BLOCK);
+        vm.prank(keyper0);
+        vm.expectRevert(DKGContract.WrongPhase.selector);
+        dkgContract.submitDealing(0, 0, 0, commitment, polyEval);
+        // One block before Dealing starts
+        vm.roll(DEALING_BLOCK - 1);
+        vm.prank(keyper0);
+        vm.expectRevert(DKGContract.WrongPhase.selector);
+        dkgContract.submitDealing(0, 0, 0, commitment, polyEval);
+        // One block after Dealing ends
+        vm.roll(DEALING_BLOCK + PHASE_LENGTH);
+        vm.prank(keyper0);
+        vm.expectRevert(DKGContract.WrongPhase.selector);
+        dkgContract.submitDealing(0, 0, 0, commitment, polyEval);
+    }
+
+    function testSubmitDealingRevertsWhenSenderIsNotMember() public {
+        vm.roll(DEALING_BLOCK);
+        vm.prank(address(0xBEEF));
+        vm.expectRevert(DKGContract.NotKeyperAtIndex.selector);
+        dkgContract.submitDealing(0, 0, 0, hex"01", hex"02");
+    }
+
+    function testSubmitDealingRevertsWhenIndexMismatchesSender() public {
+        vm.roll(DEALING_BLOCK);
+        // keyper0 is at index 0; passing index 1 should be rejected.
+        vm.prank(keyper0);
+        vm.expectRevert(DKGContract.NotKeyperAtIndex.selector);
+        dkgContract.submitDealing(0, 0, 1, hex"01", hex"02");
+    }
+
+    // submitAccusation
+
+    function testSubmitAccusationEmitsEvent() public {
+        vm.roll(ACCUSING_BLOCK);
+        uint64[] memory accused = new uint64[](2);
+        accused[0] = 1;
+        accused[1] = 2;
+        vm.expectEmit(true, true, true, true, address(dkgContract));
+        emit AccusationSubmitted(0, 0, 0, accused);
+        vm.prank(keyper0);
+        dkgContract.submitAccusation(0, 0, 0, accused);
+    }
+
+    function testSubmitAccusationRevertsOutsideAccusing() public {
+        uint64[] memory accused = new uint64[](1);
+        accused[0] = 1;
+        // Dealing
+        vm.roll(DEALING_BLOCK);
+        vm.prank(keyper0);
+        vm.expectRevert(DKGContract.WrongPhase.selector);
+        dkgContract.submitAccusation(0, 0, 0, accused);
+        // Apologizing
+        vm.roll(APOLOGIZING_BLOCK);
+        vm.prank(keyper0);
+        vm.expectRevert(DKGContract.WrongPhase.selector);
+        dkgContract.submitAccusation(0, 0, 0, accused);
+    }
+
+    function testSubmitAccusationRevertsWhenIndexMismatchesSender() public {
+        vm.roll(ACCUSING_BLOCK);
+        uint64[] memory accused = new uint64[](1);
+        accused[0] = 2;
+        vm.prank(keyper0);
+        vm.expectRevert(DKGContract.NotKeyperAtIndex.selector);
+        dkgContract.submitAccusation(0, 0, 1, accused);
+    }
+
+    function testSubmitAccusationRevertsOnEmptyArray() public {
+        // Decision: empty accusedIndices reverts. An empty accusation has no
+        // protocol meaning; clients should skip the call instead.
+        vm.roll(ACCUSING_BLOCK);
+        uint64[] memory empty = new uint64[](0);
+        vm.prank(keyper0);
+        vm.expectRevert(DKGContract.EmptyAccusation.selector);
+        dkgContract.submitAccusation(0, 0, 0, empty);
+    }
+
+    // submitApology
+
+    function testSubmitApologyEmitsEvent() public {
+        vm.roll(APOLOGIZING_BLOCK);
+        uint64[] memory accusers = new uint64[](2);
+        accusers[0] = 1;
+        accusers[1] = 2;
+        bytes[] memory polyEvals = new bytes[](2);
+        polyEvals[0] = hex"aa";
+        polyEvals[1] = hex"bb";
+        vm.expectEmit(true, true, true, true, address(dkgContract));
+        emit ApologySubmitted(0, 0, 0, accusers, polyEvals);
+        vm.prank(keyper0);
+        dkgContract.submitApology(0, 0, 0, accusers, polyEvals);
+    }
+
+    function testSubmitApologyRevertsOutsideApologizing() public {
+        uint64[] memory accusers = new uint64[](1);
+        accusers[0] = 1;
+        bytes[] memory polyEvals = new bytes[](1);
+        polyEvals[0] = hex"aa";
+        // Accusing
+        vm.roll(ACCUSING_BLOCK);
+        vm.prank(keyper0);
+        vm.expectRevert(DKGContract.WrongPhase.selector);
+        dkgContract.submitApology(0, 0, 0, accusers, polyEvals);
+        // Finalizing
+        vm.roll(FINALIZING_BLOCK);
+        vm.prank(keyper0);
+        vm.expectRevert(DKGContract.WrongPhase.selector);
+        dkgContract.submitApology(0, 0, 0, accusers, polyEvals);
+    }
+
+    function testSubmitApologyRevertsOnMismatchedArrays() public {
+        vm.roll(APOLOGIZING_BLOCK);
+        uint64[] memory accusers = new uint64[](2);
+        accusers[0] = 1;
+        accusers[1] = 2;
+        bytes[] memory polyEvals = new bytes[](1);
+        polyEvals[0] = hex"aa";
+        vm.prank(keyper0);
+        vm.expectRevert(DKGContract.MismatchedArrays.selector);
+        dkgContract.submitApology(0, 0, 0, accusers, polyEvals);
+    }
+
+    function testSubmitApologyRevertsWhenIndexMismatchesSender() public {
+        vm.roll(APOLOGIZING_BLOCK);
+        uint64[] memory accusers = new uint64[](1);
+        accusers[0] = 0;
+        bytes[] memory polyEvals = new bytes[](1);
+        polyEvals[0] = hex"aa";
+        vm.prank(keyper0);
+        vm.expectRevert(DKGContract.NotKeyperAtIndex.selector);
+        dkgContract.submitApology(0, 0, 2, accusers, polyEvals);
+    }
+
+    function testSubmitApologyAcceptsEmptyArrays() public {
+        // An apologizer with no accusers to respond to is a valid no-op for
+        // batching symmetry; the function still records the call as an event.
+        vm.roll(APOLOGIZING_BLOCK);
+        uint64[] memory accusers = new uint64[](0);
+        bytes[] memory polyEvals = new bytes[](0);
+        vm.expectEmit(true, true, true, true, address(dkgContract));
+        emit ApologySubmitted(0, 0, 0, accusers, polyEvals);
+        vm.prank(keyper0);
+        dkgContract.submitApology(0, 0, 0, accusers, polyEvals);
     }
 }
