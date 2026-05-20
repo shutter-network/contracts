@@ -12,6 +12,7 @@ contract KeyperSet is Ownable, IKeyperSet {
     address[] members;
     uint64 threshold;
     address publisher;
+    address dkgContract;
 
     constructor() Ownable(msg.sender) {}
 
@@ -39,6 +40,10 @@ contract KeyperSet is Ownable, IKeyperSet {
         return publisher;
     }
 
+    function getDKGContract() external view returns (address) {
+        return dkgContract;
+    }
+
     function addMembers(address[] calldata newMembers) public onlyOwner {
         if (finalized) {
             revert AlreadyFinalized();
@@ -60,6 +65,13 @@ contract KeyperSet is Ownable, IKeyperSet {
             revert AlreadyFinalized();
         }
         publisher = _publisher;
+    }
+
+    function setDKGContract(address _dkgContract) public onlyOwner {
+        if (finalized) {
+            revert AlreadyFinalized();
+        }
+        dkgContract = _dkgContract;
     }
 
     function setFinalized() public onlyOwner {
