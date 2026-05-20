@@ -108,11 +108,39 @@ contract DKGBenchmark is Test {
         return _fill(96);
     }
 
+    // Accusation: every other keyper's index, n-1 uint64 entries.
+    function _accusedIndices(
+        uint64 n,
+        uint64 selfIdx
+    ) internal pure returns (uint64[] memory) {
+        uint64[] memory accused = new uint64[](n - 1);
+        uint64 j = 0;
+        for (uint64 i = 0; i < n; i++) {
+            if (i == selfIdx) continue;
+            accused[j++] = i;
+        }
+        return accused;
+    }
+
+    // Apology polyEvalData: one plaintext BLS12-381 scalar per accuser, 32
+    // bytes each (NOT 129-byte ECIES — the accused keyper reveals the
+    // evaluation in the clear during apology).
+    function _apologyEvals(uint64 n) internal pure returns (bytes[] memory) {
+        bytes[] memory evals = new bytes[](n - 1);
+        for (uint64 i = 0; i < n - 1; i++) {
+            evals[i] = _fill(32);
+        }
+        return evals;
+    }
+
     // -------------------------------------------------------------------
-    // Scenario runner — happy path: n dealings + ⌈2n/3⌉ success votes.
+    // Scenario runner — happy path or worst case.
+    //   happy path: n dealings + ⌈2n/3⌉ success votes.
+    //   worst case: same + n accusations (all-vs-all) + n apologies (all
+    //   accusers acknowledged with plaintext scalars).
     // -------------------------------------------------------------------
 
-    function _runHappyPath(uint64 n) internal {
+    function _run(uint64 n, bool worstCase) internal {
         _setup(n);
         uint64 threshold = _threshold(n);
         totalGas = 0;
@@ -129,6 +157,29 @@ contract DKGBenchmark is Test {
             totalGas += before - gasleft();
         }
 
+        if (worstCase) {
+            uint64 accusingBlock = dealingBlock + PHASE_LENGTH;
+            vm.roll(accusingBlock);
+            for (uint64 i = 0; i < n; i++) {
+                uint64[] memory accused = _accusedIndices(n, i);
+                vm.prank(keypers[i]);
+                uint256 before = gasleft();
+                dkg.submitAccusation(0, 0, i, accused);
+                totalGas += before - gasleft();
+            }
+
+            uint64 apologizingBlock = dealingBlock + 2 * PHASE_LENGTH;
+            bytes[] memory apologyEvals = _apologyEvals(n);
+            vm.roll(apologizingBlock);
+            for (uint64 i = 0; i < n; i++) {
+                uint64[] memory accusers = _accusedIndices(n, i);
+                vm.prank(keypers[i]);
+                uint256 before = gasleft();
+                dkg.submitApology(0, 0, i, accusers, apologyEvals);
+                totalGas += before - gasleft();
+            }
+        }
+
         uint64 finalizingBlock = dealingBlock + 3 * PHASE_LENGTH;
         bytes memory eonKey = _eonKey();
 
@@ -140,9 +191,11 @@ contract DKGBenchmark is Test {
             totalGas += before - gasleft();
         }
 
-        assertTrue(dkg.succeeded(0), "DKG must reach success on happy path");
+        assertTrue(dkg.succeeded(0), "DKG must reach success");
         console.log(
-            "DKGBenchmark scenario=happy-path n=%s threshold=%s gas=%s",
+            worstCase
+                ? "DKGBenchmark scenario=worst-case n=%s threshold=%s gas=%s"
+                : "DKGBenchmark scenario=happy-path n=%s threshold=%s gas=%s",
             uint256(n),
             uint256(threshold),
             totalGas
@@ -150,22 +203,42 @@ contract DKGBenchmark is Test {
     }
 
     function test_happyPath_n3() public {
-        _runHappyPath(3);
+        _run(3, false);
     }
 
     function test_happyPath_n5() public {
-        _runHappyPath(5);
+        _run(5, false);
     }
 
     function test_happyPath_n10() public {
-        _runHappyPath(10);
+        _run(10, false);
     }
 
     function test_happyPath_n20() public {
-        _runHappyPath(20);
+        _run(20, false);
     }
 
     function test_happyPath_n50() public {
-        _runHappyPath(50);
+        _run(50, false);
+    }
+
+    function test_worstCase_n3() public {
+        _run(3, true);
+    }
+
+    function test_worstCase_n5() public {
+        _run(5, true);
+    }
+
+    function test_worstCase_n10() public {
+        _run(10, true);
+    }
+
+    function test_worstCase_n20() public {
+        _run(20, true);
+    }
+
+    function test_worstCase_n50() public {
+        _run(50, true);
     }
 }
