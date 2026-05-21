@@ -84,6 +84,7 @@ contract DKGContractTest is Test {
         keyperSet0.addMembers(members);
         keyperSet0.setThreshold(2);
         keyperSet0.setPublisher(address(dkgContract));
+        keyperSet0.setDKGContract(address(dkgContract));
         keyperSet0.setFinalized();
         vm.prank(dao);
         keyperSetManager.addKeyperSet(ACTIVATION_BLOCK_0, address(keyperSet0));
@@ -550,6 +551,7 @@ contract DKGContractTest is Test {
         keyperSet1.addMembers(members);
         keyperSet1.setThreshold(2);
         keyperSet1.setPublisher(address(0xDEAD)); // not the DKG contract
+        keyperSet1.setDKGContract(address(dkgContract));
         keyperSet1.setFinalized();
         uint64 activation1 = ACTIVATION_BLOCK_0 * 2;
         vm.prank(dao);
@@ -652,6 +654,7 @@ contract DKGContractTest is Test {
         keyperSet1.addMembers(members);
         keyperSet1.setThreshold(2);
         keyperSet1.setPublisher(address(dkgContract));
+        keyperSet1.setDKGContract(address(dkgContract));
         keyperSet1.setFinalized();
         uint64 activation1 = ACTIVATION_BLOCK_0 * 2; // 2000
         vm.prank(dao);
@@ -705,5 +708,88 @@ contract DKGContractTest is Test {
         emit DealingSubmitted(0, 1, 0, hex"01", emptyEvals);
         vm.prank(keyper0);
         dkgContract.submitDealing(0, 1, 0, hex"01", emptyEvals);
+    }
+
+    // ---------------------------------------------------------------------
+    // WrongDKGContract guard tests
+    // ---------------------------------------------------------------------
+
+    function _makeKeyperSetWithWrongDKGContract()
+        internal
+        returns (KeyperSet ks, uint64 ksi)
+    {
+        ks = new KeyperSet();
+        address[] memory members = new address[](3);
+        members[0] = keyper0;
+        members[1] = keyper1;
+        members[2] = keyper2;
+        ks.addMembers(members);
+        ks.setThreshold(2);
+        ks.setPublisher(address(dkgContract));
+        // dkgContract left as address(0) — intentional mismatch
+        ks.setFinalized();
+        uint64 activation = ACTIVATION_BLOCK_0 * 10;
+        vm.prank(dao);
+        keyperSetManager.addKeyperSet(activation, address(ks));
+        ksi = 1; // first new set added after keyperSet0
+    }
+
+    function testSubmitDealingRevertsOnWrongDKGContract() public {
+        (, uint64 ksi) = _makeKeyperSetWithWrongDKGContract();
+        uint64 activation = ACTIVATION_BLOCK_0 * 10;
+        uint64 dealingBlock = activation - DKG_LEAD_LENGTH;
+        vm.roll(dealingBlock);
+        bytes[] memory evals = new bytes[](0);
+        vm.prank(keyper0);
+        vm.expectRevert(DKGContract.WrongDKGContract.selector);
+        dkgContract.submitDealing(ksi, 0, 0, hex"01", evals);
+    }
+
+    function testSubmitAccusationRevertsOnWrongDKGContract() public {
+        (, uint64 ksi) = _makeKeyperSetWithWrongDKGContract();
+        uint64 activation = ACTIVATION_BLOCK_0 * 10;
+        uint64 accusingBlock = activation - DKG_LEAD_LENGTH + PHASE_LENGTH;
+        vm.roll(accusingBlock);
+        uint64[] memory accused = new uint64[](1);
+        accused[0] = 1;
+        vm.prank(keyper0);
+        vm.expectRevert(DKGContract.WrongDKGContract.selector);
+        dkgContract.submitAccusation(ksi, 0, 0, accused);
+    }
+
+    function testSubmitApologyRevertsOnWrongDKGContract() public {
+        (, uint64 ksi) = _makeKeyperSetWithWrongDKGContract();
+        uint64 activation = ACTIVATION_BLOCK_0 * 10;
+        uint64 apologizingBlock = activation - DKG_LEAD_LENGTH + 2 * PHASE_LENGTH;
+        vm.roll(apologizingBlock);
+        uint64[] memory accusers = new uint64[](1);
+        accusers[0] = 1;
+        bytes[] memory evals = new bytes[](1);
+        evals[0] = hex"aa";
+        vm.prank(keyper0);
+        vm.expectRevert(DKGContract.WrongDKGContract.selector);
+        dkgContract.submitApology(ksi, 0, 0, accusers, evals);
+    }
+
+    function testSubmitSuccessVoteRevertsOnWrongDKGContract() public {
+        (, uint64 ksi) = _makeKeyperSetWithWrongDKGContract();
+        uint64 activation = ACTIVATION_BLOCK_0 * 10;
+        uint64 finalizingBlock = activation - DKG_LEAD_LENGTH + 3 * PHASE_LENGTH;
+        vm.roll(finalizingBlock);
+        vm.prank(keyper0);
+        vm.expectRevert(DKGContract.WrongDKGContract.selector);
+        dkgContract.submitSuccessVote(ksi, 0, 0, EON_KEY_A);
+    }
+
+    function testSubmitDealingRevertsWhenDKGContractIsZero() public {
+        // address(0) is an explicit mismatch — no special case.
+        (, uint64 ksi) = _makeKeyperSetWithWrongDKGContract();
+        uint64 activation = ACTIVATION_BLOCK_0 * 10;
+        uint64 dealingBlock = activation - DKG_LEAD_LENGTH;
+        vm.roll(dealingBlock);
+        bytes[] memory evals = new bytes[](0);
+        vm.prank(keyper0);
+        vm.expectRevert(DKGContract.WrongDKGContract.selector);
+        dkgContract.submitDealing(ksi, 0, 0, hex"01", evals);
     }
 }

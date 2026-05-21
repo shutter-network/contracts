@@ -19,6 +19,7 @@ contract DKGContract {
     error EmptyAccusation();
     error MismatchedArrays();
     error AlreadyVoted();
+    error WrongDKGContract();
 
     event DealingSubmitted(
         uint64 indexed keyperSetIndex,
@@ -119,6 +120,15 @@ contract DKGContract {
         }
     }
 
+    function _checkDKGContract(uint64 keyperSetIndex) internal view {
+        address keyperSetAddress = keyperSetManager.getKeyperSetAddress(
+            keyperSetIndex
+        );
+        if (KeyperSet(keyperSetAddress).getDKGContract() != address(this)) {
+            revert WrongDKGContract();
+        }
+    }
+
     function _checkMember(
         uint64 keyperSetIndex,
         uint64 keyperIndex
@@ -150,6 +160,7 @@ contract DKGContract {
     ) external {
         _requireNotSucceeded(keyperSetIndex);
         _requirePhase(keyperSetIndex, retryCounter, Phase.Dealing);
+        _checkDKGContract(keyperSetIndex);
         _checkMember(keyperSetIndex, keyperIndex);
         emit DealingSubmitted(
             keyperSetIndex,
@@ -170,6 +181,7 @@ contract DKGContract {
     ) external {
         _requireNotSucceeded(keyperSetIndex);
         _requirePhase(keyperSetIndex, retryCounter, Phase.Accusing);
+        _checkDKGContract(keyperSetIndex);
         _checkMember(keyperSetIndex, keyperIndex);
         if (accusedIndices.length == 0) {
             revert EmptyAccusation();
@@ -191,6 +203,7 @@ contract DKGContract {
     ) external {
         _requireNotSucceeded(keyperSetIndex);
         _requirePhase(keyperSetIndex, retryCounter, Phase.Apologizing);
+        _checkDKGContract(keyperSetIndex);
         _checkMember(keyperSetIndex, keyperIndex);
         if (accuserIndices.length != polyEvalData.length) {
             revert MismatchedArrays();
@@ -211,6 +224,7 @@ contract DKGContract {
         bytes calldata eonPublicKey
     ) external {
         _requirePhase(keyperSetIndex, retryCounter, Phase.Finalizing);
+        _checkDKGContract(keyperSetIndex);
         _checkMember(keyperSetIndex, keyperIndex);
         if (hasVoted[keyperSetIndex][retryCounter][msg.sender]) {
             revert AlreadyVoted();
