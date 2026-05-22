@@ -65,6 +65,7 @@ contract DKGBenchmark is Test {
         ks.addMembers(members);
         ks.setThreshold(_threshold(n));
         ks.setPublisher(address(dkg));
+        ks.setDKGContract(address(dkg));
         ks.setFinalized();
 
         vm.prank(dao);
