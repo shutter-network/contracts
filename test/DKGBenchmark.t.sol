@@ -142,7 +142,9 @@ contract DKGBenchmark is Test {
     // -------------------------------------------------------------------
 
     function _run(uint64 n, bool worstCase) internal {
+        vm.pauseGasMetering();
         _setup(n);
+        vm.resumeGasMetering();
         uint64 threshold = _threshold(n);
         totalGas = 0;
 
