@@ -5,8 +5,11 @@ import "openzeppelin/contracts/utils/math/Math.sol";
 import "./KeyperSet.sol";
 import "./RestrictedPausable.sol";
 import "./intf/IKeyperSetManager.sol";
+import "./intf/IDKGContract.sol";
 
 error AlreadyDeactivated();
+error DKGContractNotSet();
+error DKGContractManagerMismatch();
 
 contract KeyperSetManager is RestrictedPausable, IKeyperSetManager {
     struct KeyperSetData {
@@ -42,6 +45,18 @@ contract KeyperSetManager is RestrictedPausable, IKeyperSetManager {
         }
         if (!KeyperSet(keyperSetContract).isFinalized()) {
             revert KeyperSetNotFinalized();
+        }
+        // The Keyper Set must designate a DKG Contract that itself references
+        // this manager. This is the registration-time complement to the
+        // runtime _checkDKGContract guard in DKGContract: without it, a Keyper
+        // Set paired with the wrong (or no) DKG Contract registers cleanly but
+        // can never run DKG, since every submission would revert WrongDKGContract.
+        address dkgContract = IKeyperSet(keyperSetContract).getDKGContract();
+        if (dkgContract == address(0)) {
+            revert DKGContractNotSet();
+        }
+        if (IDKGContract(dkgContract).keyperSetManager() != address(this)) {
+            revert DKGContractManagerMismatch();
         }
         keyperSets.push(KeyperSetData(activationBlock, keyperSetContract));
         KeyperSet keyperSet = KeyperSet(keyperSetContract);

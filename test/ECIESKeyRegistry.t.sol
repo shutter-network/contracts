@@ -5,6 +5,7 @@ import "forge-std/Test.sol";
 import "../src/common/ECIESKeyRegistry.sol";
 import "../src/common/KeyperSet.sol";
 import "../src/common/KeyperSetManager.sol";
+import "../src/common/DKGContract.sol";
 import "../src/common/intf/IKeyperSetManager.sol";
 
 contract ECIESKeyRegistryTest is Test {
@@ -31,6 +32,13 @@ contract ECIESKeyRegistryTest is Test {
 
         registry = new ECIESKeyRegistry(address(keyperSetManager));
 
+        DKGContract dkgContract = new DKGContract(
+            1,
+            1,
+            address(keyperSetManager),
+            address(0)
+        );
+
         keyperSet0 = new KeyperSet();
         address[] memory members = new address[](3);
         members[0] = keyper0;
@@ -38,6 +46,7 @@ contract ECIESKeyRegistryTest is Test {
         members[2] = keyper2;
         keyperSet0.addMembers(members);
         keyperSet0.setThreshold(2);
+        keyperSet0.setDKGContract(address(dkgContract));
         keyperSet0.setFinalized();
         vm.prank(dao);
         keyperSetManager.addKeyperSet(ACTIVATION_BLOCK_0, address(keyperSet0));

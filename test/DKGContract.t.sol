@@ -727,7 +727,19 @@ contract DKGContractTest is Test {
         ks.addMembers(members);
         ks.setThreshold(2);
         ks.setPublisher(address(dkgContract));
-        // dkgContract left as address(0) — intentional mismatch
+        // Point the Keyper Set at a *different* DKGContract that is still bound
+        // to this KeyperSetManager. Registration accepts it (its
+        // keyperSetManager matches the manager), but it is not the dkgContract
+        // the keypers submit to, so the runtime _checkDKGContract guard rejects
+        // every submission with WrongDKGContract. A zero DKGContract can no
+        // longer reach this guard: addKeyperSet rejects it at registration.
+        DKGContract otherDKG = new DKGContract(
+            PHASE_LENGTH,
+            DKG_LEAD_LENGTH,
+            address(keyperSetManager),
+            address(keyBroadcastContract)
+        );
+        ks.setDKGContract(address(otherDKG));
         ks.setFinalized();
         uint64 activation = ACTIVATION_BLOCK_0 * 10;
         vm.prank(dao);
@@ -786,17 +798,5 @@ contract DKGContractTest is Test {
         vm.prank(keyper0);
         vm.expectRevert(DKGContract.WrongDKGContract.selector);
         dkgContract.submitSuccessVote(ksi, 0, 0, EON_KEY_A);
-    }
-
-    function testSubmitDealingRevertsWhenDKGContractIsZero() public {
-        // address(0) is an explicit mismatch — no special case.
-        (, uint64 ksi) = _makeKeyperSetWithWrongDKGContract();
-        uint64 activation = ACTIVATION_BLOCK_0 * 10;
-        uint64 dealingBlock = activation - DKG_LEAD_LENGTH;
-        vm.roll(dealingBlock);
-        bytes[] memory evals = new bytes[](0);
-        vm.prank(keyper0);
-        vm.expectRevert(DKGContract.WrongDKGContract.selector);
-        dkgContract.submitDealing(ksi, 0, 0, hex"01", evals);
     }
 }

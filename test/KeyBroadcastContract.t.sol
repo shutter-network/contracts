@@ -5,6 +5,7 @@ import "forge-std/Test.sol";
 import "../src/common/KeyBroadcastContract.sol";
 import "../src/common/KeyperSetManager.sol";
 import "../src/common/KeyperSet.sol";
+import "../src/common/DKGContract.sol";
 
 contract MockPublisher is EonKeyPublisher {
     function eonKeyConfirmed(bytes memory) external pure returns (bool) {
@@ -41,8 +42,15 @@ contract KeyBroadcastTest is Test {
         keyBroadcastContract = new KeyBroadcastContract(
             address(keyperSetManager)
         );
+        DKGContract dkgContract = new DKGContract(
+            1,
+            1,
+            address(keyperSetManager),
+            address(keyBroadcastContract)
+        );
         keyperSet0 = new KeyperSet();
         keyperSet0.setPublisher(address(publisher0));
+        keyperSet0.setDKGContract(address(dkgContract));
         keyperSet0.setFinalized();
 
         vm.prank(dao);
@@ -50,6 +58,7 @@ contract KeyBroadcastTest is Test {
 
         keyperSet1 = new KeyperSet();
         keyperSet1.setPublisher(address(publisher1));
+        keyperSet1.setDKGContract(address(dkgContract));
         keyperSet1.setFinalized();
 
         vm.prank(dao);

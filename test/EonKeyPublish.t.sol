@@ -3,6 +3,7 @@ pragma solidity ^0.8.22;
 
 import "forge-std/Test.sol";
 import "../src/common/EonKeyPublish.sol";
+import "../src/common/DKGContract.sol";
 
 contract EonKeyPublishTest is Test {
     KeyperSetManager public manager;
@@ -10,6 +11,7 @@ contract EonKeyPublishTest is Test {
     KeyperSet public keyperSet0;
     KeyperSet public keyperSet;
     KeyBroadcastContract public broadcastContract;
+    DKGContract public dkgContract;
     address public initializer;
     address public dao;
 
@@ -23,8 +25,16 @@ contract EonKeyPublishTest is Test {
         vm.prank(initializer);
         manager.initialize(dao, address(420));
         broadcastContract = new KeyBroadcastContract(address(manager));
+        dkgContract = new DKGContract(
+            1,
+            1,
+            address(manager),
+            address(broadcastContract)
+        );
         keyperSet = new KeyperSet();
+        keyperSet.setDKGContract(address(dkgContract));
         keyperSet0 = new KeyperSet();
+        keyperSet0.setDKGContract(address(dkgContract));
         keyperSet0.setFinalized();
         vm.prank(dao);
         uint64 eon = 1;
@@ -58,6 +68,7 @@ contract EonKeyPublishTest is Test {
         );
         ks.setPublisher(address(publisher));
         ks.addMembers(members);
+        ks.setDKGContract(address(dkgContract));
         ks.setFinalized();
         vm.prank(dao);
         manager.addKeyperSet(uint64(10), address(ks));
