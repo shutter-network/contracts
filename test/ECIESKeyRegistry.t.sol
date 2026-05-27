@@ -105,9 +105,7 @@ contract ECIESKeyRegistryTest is Test {
         registry.registerKey(0, 0, pubkey);
     }
 
-    function testRegisterKeyRevertsWhenKeyperIndexDoesNotMatchSender()
-        public
-    {
+    function testRegisterKeyRevertsWhenKeyperIndexDoesNotMatchSender() public {
         bytes memory pubkey = hex"42";
         // keyper0 is the member at index 0; using index 1 must fail.
         vm.prank(keyper0);

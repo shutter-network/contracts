@@ -90,7 +90,9 @@ contract DKGBenchmark is Test {
 
     // PolyCommitment: one compressed BLS12-381 G2 point per polynomial
     // coefficient, plus a 4-byte length prefix → 4 + threshold × 96 bytes.
-    function _commitment(uint64 threshold) internal pure returns (bytes memory) {
+    function _commitment(
+        uint64 threshold
+    ) internal pure returns (bytes memory) {
         return _fill(4 + uint256(threshold) * 96);
     }
 

@@ -170,7 +170,10 @@ contract DeployScript is Script {
 
         // Step 2: Set the DKG Contract as publisher so it can broadcast eon keys
         keyperSet.setPublisher(address(dkgContract));
-        console.log("Eon Key Publisher set to DKGContract:", address(dkgContract));
+        console.log(
+            "Eon Key Publisher set to DKGContract:",
+            address(dkgContract)
+        );
 
         keyperSet.setFinalized();
         console.log("KeyperSet finalized");

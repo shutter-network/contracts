@@ -760,7 +760,10 @@ contract DKGContractTest is Test {
     function testSubmitApologyRevertsOnWrongDKGContract() public {
         (, uint64 ksi) = _makeKeyperSetWithWrongDKGContract();
         uint64 activation = ACTIVATION_BLOCK_0 * 10;
-        uint64 apologizingBlock = activation - DKG_LEAD_LENGTH + 2 * PHASE_LENGTH;
+        uint64 apologizingBlock = activation -
+            DKG_LEAD_LENGTH +
+            2 *
+            PHASE_LENGTH;
         vm.roll(apologizingBlock);
         uint64[] memory accusers = new uint64[](1);
         accusers[0] = 1;
@@ -774,7 +777,10 @@ contract DKGContractTest is Test {
     function testSubmitSuccessVoteRevertsOnWrongDKGContract() public {
         (, uint64 ksi) = _makeKeyperSetWithWrongDKGContract();
         uint64 activation = ACTIVATION_BLOCK_0 * 10;
-        uint64 finalizingBlock = activation - DKG_LEAD_LENGTH + 3 * PHASE_LENGTH;
+        uint64 finalizingBlock = activation -
+            DKG_LEAD_LENGTH +
+            3 *
+            PHASE_LENGTH;
         vm.roll(finalizingBlock);
         vm.prank(keyper0);
         vm.expectRevert(DKGContract.WrongDKGContract.selector);
