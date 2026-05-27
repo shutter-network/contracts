@@ -6,6 +6,7 @@ import "../src/common/DKGContract.sol";
 import "../src/common/KeyperSet.sol";
 import "../src/common/KeyperSetManager.sol";
 import "../src/common/KeyBroadcastContract.sol";
+import "../src/common/intf/IDKGContract.sol";
 
 contract DKGContractTest is Test {
     DKGContract public dkgContract;
@@ -106,7 +107,7 @@ contract DKGContractTest is Test {
     function _assertPhase(
         uint64 blockNumber,
         uint64 retryCounter,
-        DKGContract.Phase expected
+        IDKGContract.Phase expected
     ) internal {
         vm.roll(blockNumber);
         assertEq(
@@ -124,15 +125,15 @@ contract DKGContractTest is Test {
     uint64 constant DKG_START_R0 = ACTIVATION_BLOCK_0 - DKG_LEAD_LENGTH;
 
     function testCurrentPhaseBeforeDkgStartIsNone() public {
-        _assertPhase(DKG_START_R0 - 1, 0, DKGContract.Phase.None);
+        _assertPhase(DKG_START_R0 - 1, 0, IDKGContract.Phase.None);
     }
 
     function testCurrentPhaseDealingBoundaries() public {
-        _assertPhase(DKG_START_R0, 0, DKGContract.Phase.Dealing);
+        _assertPhase(DKG_START_R0, 0, IDKGContract.Phase.Dealing);
         _assertPhase(
             DKG_START_R0 + PHASE_LENGTH - 1,
             0,
-            DKGContract.Phase.Dealing
+            IDKGContract.Phase.Dealing
         );
     }
 
@@ -141,19 +142,19 @@ contract DKGContractTest is Test {
         _assertPhase(
             DKG_START_R0 + PHASE_LENGTH - 1,
             0,
-            DKGContract.Phase.Dealing
+            IDKGContract.Phase.Dealing
         );
         // first block of Accusing
         _assertPhase(
             DKG_START_R0 + PHASE_LENGTH,
             0,
-            DKGContract.Phase.Accusing
+            IDKGContract.Phase.Accusing
         );
         // last block of Accusing
         _assertPhase(
             DKG_START_R0 + 2 * PHASE_LENGTH - 1,
             0,
-            DKGContract.Phase.Accusing
+            IDKGContract.Phase.Accusing
         );
     }
 
@@ -162,19 +163,19 @@ contract DKGContractTest is Test {
         _assertPhase(
             DKG_START_R0 + 2 * PHASE_LENGTH - 1,
             0,
-            DKGContract.Phase.Accusing
+            IDKGContract.Phase.Accusing
         );
         // first block of Apologizing
         _assertPhase(
             DKG_START_R0 + 2 * PHASE_LENGTH,
             0,
-            DKGContract.Phase.Apologizing
+            IDKGContract.Phase.Apologizing
         );
         // last block of Apologizing
         _assertPhase(
             DKG_START_R0 + 3 * PHASE_LENGTH - 1,
             0,
-            DKGContract.Phase.Apologizing
+            IDKGContract.Phase.Apologizing
         );
     }
 
@@ -183,19 +184,19 @@ contract DKGContractTest is Test {
         _assertPhase(
             DKG_START_R0 + 3 * PHASE_LENGTH - 1,
             0,
-            DKGContract.Phase.Apologizing
+            IDKGContract.Phase.Apologizing
         );
         // first block of Finalizing
         _assertPhase(
             DKG_START_R0 + 3 * PHASE_LENGTH,
             0,
-            DKGContract.Phase.Finalizing
+            IDKGContract.Phase.Finalizing
         );
         // last block of Finalizing
         _assertPhase(
             DKG_START_R0 + 4 * PHASE_LENGTH - 1,
             0,
-            DKGContract.Phase.Finalizing
+            IDKGContract.Phase.Finalizing
         );
     }
 
@@ -204,7 +205,7 @@ contract DKGContractTest is Test {
         _assertPhase(
             DKG_START_R0 + 4 * PHASE_LENGTH,
             0,
-            DKGContract.Phase.None
+            IDKGContract.Phase.None
         );
     }
 
@@ -213,19 +214,19 @@ contract DKGContractTest is Test {
         // r=0 Finalizing ends at DKG_START_R0 + 4 * PHASE_LENGTH = 1000.
         // r=1 Dealing should begin at the same block.
         uint64 boundary = DKG_START_R0 + 4 * PHASE_LENGTH;
-        _assertPhase(boundary, 1, DKGContract.Phase.Dealing);
-        _assertPhase(boundary, 0, DKGContract.Phase.None);
+        _assertPhase(boundary, 1, IDKGContract.Phase.Dealing);
+        _assertPhase(boundary, 0, IDKGContract.Phase.None);
 
         // one block before boundary: r=0 still Finalizing, r=1 still None
-        _assertPhase(boundary - 1, 0, DKGContract.Phase.Finalizing);
-        _assertPhase(boundary - 1, 1, DKGContract.Phase.None);
+        _assertPhase(boundary - 1, 0, IDKGContract.Phase.Finalizing);
+        _assertPhase(boundary - 1, 1, IDKGContract.Phase.None);
     }
 
     function testRetryDealingLastBlockBeforeAccusing() public {
         // r=1 Dealing: [1000, 1010)
         uint64 r1Start = DKG_START_R0 + CYCLE_LENGTH;
-        _assertPhase(r1Start + PHASE_LENGTH - 1, 1, DKGContract.Phase.Dealing);
-        _assertPhase(r1Start + PHASE_LENGTH, 1, DKGContract.Phase.Accusing);
+        _assertPhase(r1Start + PHASE_LENGTH - 1, 1, IDKGContract.Phase.Dealing);
+        _assertPhase(r1Start + PHASE_LENGTH, 1, IDKGContract.Phase.Accusing);
     }
 
     function testDkgStartArithmeticPureView() public view {

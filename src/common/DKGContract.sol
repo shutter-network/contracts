@@ -3,16 +3,9 @@ pragma solidity ^0.8.22;
 
 import "./KeyperSetManager.sol";
 import "./KeyBroadcastContract.sol";
+import "./intf/IDKGContract.sol";
 
-contract DKGContract {
-    enum Phase {
-        None,
-        Dealing,
-        Accusing,
-        Apologizing,
-        Finalizing
-    }
-
+contract DKGContract is IDKGContract {
     error WrongPhase();
     error NotKeyperAtIndex();
     error AlreadySucceeded();
@@ -55,8 +48,11 @@ contract DKGContract {
 
     uint64 public immutable PHASE_LENGTH;
     uint64 public immutable DKG_LEAD_LENGTH;
-    KeyperSetManager public immutable keyperSetManager;
-    KeyBroadcastContract public immutable keyBroadcastContract;
+    // Held as concrete types for internal calls; exposed as address through the
+    // IDKGContract getters below so the interface stays free of concrete-contract
+    // imports (which would re-create the KeyperSetManager <-> DKGContract cycle).
+    KeyperSetManager internal immutable _keyperSetManager;
+    KeyBroadcastContract internal immutable _keyBroadcastContract;
 
     // Set to true once a DKG Instance for Keyper Set Index k has reached the
     // success-vote threshold. Never reset — gates the success-triggering logic
@@ -75,10 +71,18 @@ contract DKGContract {
     ) {
         PHASE_LENGTH = phaseLength;
         DKG_LEAD_LENGTH = dkgLeadLength;
-        keyperSetManager = KeyperSetManager(keyperSetManagerAddress);
-        keyBroadcastContract = KeyBroadcastContract(
+        _keyperSetManager = KeyperSetManager(keyperSetManagerAddress);
+        _keyBroadcastContract = KeyBroadcastContract(
             keyBroadcastContractAddress
         );
+    }
+
+    function keyperSetManager() external view returns (address) {
+        return address(_keyperSetManager);
+    }
+
+    function keyBroadcastContract() external view returns (address) {
+        return address(_keyBroadcastContract);
     }
 
     function cycleLength() public view returns (uint64) {
@@ -89,7 +93,7 @@ contract DKGContract {
         uint64 keyperSetIndex,
         uint64 retryCounter
     ) public view returns (int256) {
-        uint64 activationBlock = keyperSetManager.getKeyperSetActivationBlock(
+        uint64 activationBlock = _keyperSetManager.getKeyperSetActivationBlock(
             keyperSetIndex
         );
         return
@@ -121,7 +125,7 @@ contract DKGContract {
     }
 
     function _checkDKGContract(uint64 keyperSetIndex) internal view {
-        address keyperSetAddress = keyperSetManager.getKeyperSetAddress(
+        address keyperSetAddress = _keyperSetManager.getKeyperSetAddress(
             keyperSetIndex
         );
         if (KeyperSet(keyperSetAddress).getDKGContract() != address(this)) {
@@ -133,7 +137,7 @@ contract DKGContract {
         uint64 keyperSetIndex,
         uint64 keyperIndex
     ) internal view {
-        address keyperSetAddress = keyperSetManager.getKeyperSetAddress(
+        address keyperSetAddress = _keyperSetManager.getKeyperSetAddress(
             keyperSetIndex
         );
         if (KeyperSet(keyperSetAddress).getMember(keyperIndex) != msg.sender) {
@@ -246,7 +250,7 @@ contract DKGContract {
         // emit the event above, but do not re-trigger success once it has
         // already been recorded.
         if (!succeeded[keyperSetIndex]) {
-            address keyperSetAddress = keyperSetManager.getKeyperSetAddress(
+            address keyperSetAddress = _keyperSetManager.getKeyperSetAddress(
                 keyperSetIndex
             );
             uint64 threshold = KeyperSet(keyperSetAddress).getThreshold();
@@ -256,7 +260,7 @@ contract DKGContract {
                 // been broadcast (or the publisher is not authorized), the DKG
                 // outcome is still considered successful.
                 try
-                    keyBroadcastContract.broadcastEonKey(
+                    _keyBroadcastContract.broadcastEonKey(
                         keyperSetIndex,
                         eonPublicKey
                     )
