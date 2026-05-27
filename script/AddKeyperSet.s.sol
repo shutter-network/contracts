@@ -41,7 +41,7 @@ contract AddKeyperSet is Script {
             keyBroadcastContractAddress
         );
 
-        address dkgContract = vm.envOr("DKG_CONTRACT_ADDRESS", address(0));
+        address dkgContract = vm.envAddress("DKG_CONTRACT_ADDRESS");
 
         address[] memory keypers = vm.envAddress("KEYPER_ADDRESSES", ",");
         uint256 threshold = vm.envUint("THRESHOLD");
@@ -59,9 +59,7 @@ contract AddKeyperSet is Script {
         keyperSet.addMembers(keypers);
         keyperSet.setThreshold(uint64(threshold));
         keyperSet.setPublisher(address(eonKeyPublish));
-        if (dkgContract != address(0)) {
-            keyperSet.setDKGContract(dkgContract);
-        }
+        keyperSet.setDKGContract(dkgContract);
         keyperSet.setFinalized();
         console.log("keyperSet:", address(keyperSet));
         console.log("eonKeyPublish:", address(eonKeyPublish));
