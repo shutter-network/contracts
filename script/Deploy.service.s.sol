@@ -21,6 +21,17 @@ contract Deploy is Script {
 
         // add bootstrap keyper set
         KeyperSet fakeKeyperset = new KeyperSet();
+        // The bootstrap keyper set must designate a DKG Contract bound to this
+        // manager, otherwise addKeyperSet reverts DKGContractNotSet (registration
+        // -time validation from the check-dkg-address change). The bootstrap set
+        // never runs DKG, so a placeholder KeyBroadcastContract address is fine.
+        DKGContract bootstrapDkg = new DKGContract(
+            10,
+            40,
+            address(ksm),
+            address(0)
+        );
+        fakeKeyperset.setDKGContract(address(bootstrapDkg));
         fakeKeyperset.setFinalized();
         ksm.addKeyperSet(0, address(fakeKeyperset));
 
