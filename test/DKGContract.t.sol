@@ -91,6 +91,26 @@ contract DKGContractTest is Test {
         keyperSetManager.addKeyperSet(ACTIVATION_BLOCK_0, address(keyperSet0));
     }
 
+    function testConstructorRevertsOnZeroPhaseLength() public {
+        vm.expectRevert(DKGContract.ZeroLengthParameter.selector);
+        new DKGContract(
+            0,
+            DKG_LEAD_LENGTH,
+            address(keyperSetManager),
+            address(keyBroadcastContract)
+        );
+    }
+
+    function testConstructorRevertsOnZeroDKGLeadLength() public {
+        vm.expectRevert(DKGContract.ZeroLengthParameter.selector);
+        new DKGContract(
+            PHASE_LENGTH,
+            0,
+            address(keyperSetManager),
+            address(keyBroadcastContract)
+        );
+    }
+
     function testDeploysWithImmutables() public view {
         assertEq(dkgContract.PHASE_LENGTH(), PHASE_LENGTH);
         assertEq(dkgContract.DKG_LEAD_LENGTH(), DKG_LEAD_LENGTH);
@@ -479,6 +499,13 @@ contract DKGContractTest is Test {
         vm.prank(keyper0);
         vm.expectRevert(DKGContract.NotKeyperAtIndex.selector);
         dkgContract.submitSuccessVote(0, 0, 1, EON_KEY_A);
+    }
+
+    function testSubmitSuccessVoteRevertsOnEmptyEonPublicKey() public {
+        vm.roll(FINALIZING_BLOCK);
+        vm.prank(keyper0);
+        vm.expectRevert(DKGContract.EmptyEonPublicKey.selector);
+        dkgContract.submitSuccessVote(0, 0, 0, new bytes(0));
     }
 
     function testSubmitSuccessVoteRevertsOnDoubleVote() public {

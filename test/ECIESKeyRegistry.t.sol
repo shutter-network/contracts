@@ -144,18 +144,17 @@ contract ECIESKeyRegistryTest is Test {
         registry.registerKey(99, 0, hex"00");
     }
 
-    function testRegisterKeyAcceptsArbitraryBytes() public {
-        // Registry stores arbitrary bytes — no format validation.
+    function testRegisterKeyAcceptsArbitraryNonEmptyBytes() public {
         bytes memory tiny = hex"00";
-        bytes memory empty = new bytes(0);
-
         vm.prank(keyper0);
         registry.registerKey(0, 0, tiny);
         assertEq(registry.getKey(keyper0), tiny);
+    }
 
+    function testRegisterKeyRevertsOnEmptyKey() public {
         vm.prank(keyper0);
-        registry.registerKey(0, 0, empty);
-        assertEq(registry.getKey(keyper0).length, 0);
+        vm.expectRevert(ECIESKeyRegistry.EmptyECIESPublicKey.selector);
+        registry.registerKey(0, 0, new bytes(0));
     }
 
     // -------------------------------------------------------------------------

@@ -9,6 +9,7 @@ contract ECIESKeyRegistry {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     error NotAMember();
+    error EmptyECIESPublicKey();
 
     event KeyRegistered(address indexed keyper, bytes eciesPublicKey);
 
@@ -34,6 +35,9 @@ contract ECIESKeyRegistry {
         }
         if (keyperSet.getMember(keyperIndex) != msg.sender) {
             revert NotAMember();
+        }
+        if (eciesPublicKey.length == 0) {
+            revert EmptyECIESPublicKey();
         }
         registeredKeypers.add(msg.sender);
         keys[msg.sender] = eciesPublicKey;

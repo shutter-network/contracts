@@ -13,6 +13,8 @@ contract DKGContract is IDKGContract {
     error MismatchedArrays();
     error AlreadyVoted();
     error WrongDKGContract();
+    error ZeroLengthParameter();
+    error EmptyEonPublicKey();
 
     event DealingSubmitted(
         uint64 indexed keyperSetIndex,
@@ -69,6 +71,9 @@ contract DKGContract is IDKGContract {
         address keyperSetManagerAddress,
         address keyBroadcastContractAddress
     ) {
+        if (phaseLength == 0 || dkgLeadLength == 0) {
+            revert ZeroLengthParameter();
+        }
         PHASE_LENGTH = phaseLength;
         DKG_LEAD_LENGTH = dkgLeadLength;
         _keyperSetManager = KeyperSetManager(keyperSetManagerAddress);
@@ -230,6 +235,9 @@ contract DKGContract is IDKGContract {
         _requirePhase(keyperSetIndex, retryCounter, Phase.Finalizing);
         _checkDKGContract(keyperSetIndex);
         _checkMember(keyperSetIndex, keyperIndex);
+        if (eonPublicKey.length == 0) {
+            revert EmptyEonPublicKey();
+        }
         if (hasVoted[keyperSetIndex][retryCounter][msg.sender]) {
             revert AlreadyVoted();
         }
