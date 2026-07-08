@@ -9,6 +9,8 @@ CONTRACTS=(
     "src/common/KeyperSet.sol:KeyperSet"
     "src/common/EonKeyPublish.sol:EonKeyPublish"
     "src/common/KeyBroadcastContract.sol:KeyBroadcastContract"
+    "src/common/DKGContract.sol:DKGContract"
+    "src/common/ECIESKeyRegistry.sol:ECIESKeyRegistry"
     "src/shop/Inbox.sol:Inbox"
     "src/shutter-service/ShutterRegistry.sol:ShutterRegistry"
     "src/shutter-service/ShutterEventTriggerRegistry.sol:ShutterEventTriggerRegistryV1"
