@@ -139,11 +139,7 @@ contract DKGState is Script {
         console.log("  DKG contract:     ", c.dkgAddr);
         console.log("  activation block: ", uint256(c.activationBlock));
         console.log(
-            string.concat(
-                "  members (",
-                vm.toString(c.members.length),
-                "):"
-            )
+            string.concat("  members (", vm.toString(c.members.length), "):")
         );
         for (uint256 i = 0; i < c.members.length; i++) {
             console.log(
@@ -182,9 +178,7 @@ contract DKGState is Script {
         } else {
             bytes32 h = keccak256(c.broadcastedKey);
             string memory desc = _keyDesc(reg, h);
-            console.log(
-                string.concat("  eon key broadcast: ", desc)
-            );
+            console.log(string.concat("  eon key broadcast: ", desc));
         }
     }
 
@@ -229,9 +223,7 @@ contract DKGState is Script {
     // ---------------- fetch logs ----------------
 
     function fetchLogs(Ctx memory ctx) internal returns (Logs memory logs) {
-        uint256 fromBlock = ctx.dkgStart0 < 0
-            ? 0
-            : uint256(ctx.dkgStart0);
+        uint256 fromBlock = ctx.dkgStart0 < 0 ? 0 : uint256(ctx.dkgStart0);
         uint256 toBlock = ctx.currentBlock;
         if (fromBlock > toBlock) {
             logs.dealing = new Vm.EthGetLogs[](0);
@@ -400,7 +392,21 @@ contract DKGState is Script {
                 _printCondensed(condStart, condEnd);
                 condStart = -1;
             }
-            _printRetry(c, logs, reg, ru, inProgress, ru == uint64(uint256(succeededAtRetry >= 0 ? succeededAtRetry : int256(-1))));
+            _printRetry(
+                c,
+                logs,
+                reg,
+                ru,
+                inProgress,
+                ru ==
+                    uint64(
+                        uint256(
+                            succeededAtRetry >= 0
+                                ? succeededAtRetry
+                                : int256(-1)
+                        )
+                    )
+            );
         }
         if (condStart >= 0) _printCondensed(condStart, condEnd);
     }
@@ -529,11 +535,7 @@ contract DKGState is Script {
         }
         if (count == 0) {
             console.log(
-                string.concat(
-                    "  Dealings: none (0/",
-                    vm.toString(total),
-                    ")"
-                )
+                string.concat("  Dealings: none (0/", vm.toString(total), ")")
             );
             return;
         }
@@ -572,9 +574,7 @@ contract DKGState is Script {
         console.log(string.concat("  Accusations (", vm.toString(n), "):"));
         for (uint256 i = 0; i < logs.accusation.length; i++) {
             if (uint64(uint256(logs.accusation[i].topics[2])) != r) continue;
-            uint64 accuser = uint64(
-                uint256(logs.accusation[i].topics[3])
-            );
+            uint64 accuser = uint64(uint256(logs.accusation[i].topics[3]));
             uint64[] memory accused = abi.decode(
                 logs.accusation[i].data,
                 (uint64[])
@@ -606,9 +606,7 @@ contract DKGState is Script {
         console.log(string.concat("  Apologies (", vm.toString(n), "):"));
         for (uint256 i = 0; i < logs.apology.length; i++) {
             if (uint64(uint256(logs.apology[i].topics[2])) != r) continue;
-            uint64 apologizer = uint64(
-                uint256(logs.apology[i].topics[3])
-            );
+            uint64 apologizer = uint64(uint256(logs.apology[i].topics[3]));
             (uint64[] memory accusers, ) = abi.decode(
                 logs.apology[i].data,
                 (uint64[], bytes[])
@@ -750,10 +748,7 @@ contract DKGState is Script {
             )
         );
         console.log(
-            string.concat(
-                "      voters: ",
-                _indexList(t.voterByKey[li], true)
-            )
+            string.concat("      voters: ", _indexList(t.voterByKey[li], true))
         );
     }
 
@@ -769,7 +764,9 @@ contract DKGState is Script {
         Ctx memory c,
         uint64 r
     ) internal pure returns (uint256) {
-        int256 s = c.dkgStart0 + int256(uint256(r)) * int256(uint256(c.cycleLen));
+        int256 s = c.dkgStart0 +
+            int256(uint256(r)) *
+            int256(uint256(c.cycleLen));
         // Caller must not invoke for retries with negative start; guarded by
         // _currentRetry returning -1 upstream.
         return uint256(s);
