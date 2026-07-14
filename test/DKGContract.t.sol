@@ -16,6 +16,7 @@ contract DKGContractTest is Test {
 
     uint64 constant PHASE_LENGTH = 10;
     uint64 constant DKG_LEAD_LENGTH = 40;
+    uint64 constant MAX_RETRIES = 10;
     uint64 constant CYCLE_LENGTH = 4 * PHASE_LENGTH;
     uint64 constant ACTIVATION_BLOCK_0 = 1000;
 
@@ -73,6 +74,7 @@ contract DKGContractTest is Test {
         dkgContract = new DKGContract(
             PHASE_LENGTH,
             DKG_LEAD_LENGTH,
+            MAX_RETRIES,
             address(keyperSetManager),
             address(keyBroadcastContract)
         );
@@ -96,6 +98,7 @@ contract DKGContractTest is Test {
         new DKGContract(
             0,
             DKG_LEAD_LENGTH,
+            MAX_RETRIES,
             address(keyperSetManager),
             address(keyBroadcastContract)
         );
@@ -106,6 +109,18 @@ contract DKGContractTest is Test {
         new DKGContract(
             PHASE_LENGTH,
             0,
+            MAX_RETRIES,
+            address(keyperSetManager),
+            address(keyBroadcastContract)
+        );
+    }
+
+    function testConstructorRevertsOnZeroMaxRetries() public {
+        vm.expectRevert(DKGContract.ZeroMaxRetries.selector);
+        new DKGContract(
+            PHASE_LENGTH,
+            DKG_LEAD_LENGTH,
+            0,
             address(keyperSetManager),
             address(keyBroadcastContract)
         );
@@ -114,6 +129,7 @@ contract DKGContractTest is Test {
     function testDeploysWithImmutables() public view {
         assertEq(dkgContract.PHASE_LENGTH(), PHASE_LENGTH);
         assertEq(dkgContract.DKG_LEAD_LENGTH(), DKG_LEAD_LENGTH);
+        assertEq(dkgContract.MAX_RETRIES(), MAX_RETRIES);
         assertEq(
             address(dkgContract.keyperSetManager()),
             address(keyperSetManager)
@@ -265,6 +281,7 @@ contract DKGContractTest is Test {
         DKGContract dkg = new DKGContract(
             PHASE_LENGTH,
             2000, // lead length larger than activation block 1000
+            MAX_RETRIES,
             address(keyperSetManager),
             address(keyBroadcastContract)
         );
@@ -763,6 +780,7 @@ contract DKGContractTest is Test {
         DKGContract otherDKG = new DKGContract(
             PHASE_LENGTH,
             DKG_LEAD_LENGTH,
+            MAX_RETRIES,
             address(keyperSetManager),
             address(keyBroadcastContract)
         );
@@ -825,5 +843,128 @@ contract DKGContractTest is Test {
         vm.prank(keyper0);
         vm.expectRevert(DKGContract.WrongDKGContract.selector);
         dkgContract.submitSuccessVote(ksi, 0, 0, EON_KEY_A);
+    }
+
+    // ---------------------------------------------------------------------
+    // MAX_RETRIES enforcement
+    // ---------------------------------------------------------------------
+
+    // Retry r's Dealing window starts at DKG_START_R0 + r * CYCLE_LENGTH.
+    function _dealingBlockForRetry(uint64 r) internal pure returns (uint64) {
+        return DKG_START_R0 + r * CYCLE_LENGTH;
+    }
+
+    function testSubmitDealingRevertsAtMaxRetries() public {
+        // retryCounter == MAX_RETRIES: rejected before phase arithmetic runs,
+        // regardless of block number.
+        vm.roll(_dealingBlockForRetry(MAX_RETRIES));
+        bytes[] memory evals = new bytes[](0);
+        vm.prank(keyper0);
+        vm.expectRevert(DKGContract.MaxRetriesExceeded.selector);
+        dkgContract.submitDealing(0, MAX_RETRIES, 0, hex"01", evals);
+    }
+
+    function testSubmitDealingRevertsAboveMaxRetries() public {
+        vm.roll(_dealingBlockForRetry(MAX_RETRIES + 5));
+        bytes[] memory evals = new bytes[](0);
+        vm.prank(keyper0);
+        vm.expectRevert(DKGContract.MaxRetriesExceeded.selector);
+        dkgContract.submitDealing(0, MAX_RETRIES + 5, 0, hex"01", evals);
+    }
+
+    function testSubmitAccusationRevertsAtMaxRetries() public {
+        vm.roll(_dealingBlockForRetry(MAX_RETRIES) + PHASE_LENGTH);
+        uint64[] memory accused = new uint64[](1);
+        accused[0] = 1;
+        vm.prank(keyper0);
+        vm.expectRevert(DKGContract.MaxRetriesExceeded.selector);
+        dkgContract.submitAccusation(0, MAX_RETRIES, 0, accused);
+    }
+
+    function testSubmitApologyRevertsAtMaxRetries() public {
+        vm.roll(_dealingBlockForRetry(MAX_RETRIES) + 2 * PHASE_LENGTH);
+        uint64[] memory accusers = new uint64[](1);
+        accusers[0] = 1;
+        bytes[] memory evals = new bytes[](1);
+        evals[0] = hex"aa";
+        vm.prank(keyper0);
+        vm.expectRevert(DKGContract.MaxRetriesExceeded.selector);
+        dkgContract.submitApology(0, MAX_RETRIES, 0, accusers, evals);
+    }
+
+    function testSubmitSuccessVoteRevertsAtMaxRetries() public {
+        vm.roll(_dealingBlockForRetry(MAX_RETRIES) + 3 * PHASE_LENGTH);
+        vm.prank(keyper0);
+        vm.expectRevert(DKGContract.MaxRetriesExceeded.selector);
+        dkgContract.submitSuccessVote(0, MAX_RETRIES, 0, EON_KEY_A);
+    }
+
+    function testSubmitDealingAcceptedAtLastAllowedRetry() public {
+        // retryCounter == MAX_RETRIES - 1 is the last valid retry and must
+        // succeed given a legitimate Dealing-phase block number.
+        uint64 lastRetry = MAX_RETRIES - 1;
+        vm.roll(_dealingBlockForRetry(lastRetry));
+        bytes[] memory evals = new bytes[](0);
+        vm.expectEmit(true, true, true, true, address(dkgContract));
+        emit DealingSubmitted(0, lastRetry, 0, hex"01", evals);
+        vm.prank(keyper0);
+        dkgContract.submitDealing(0, lastRetry, 0, hex"01", evals);
+    }
+
+    function testCurrentPhaseIsNoneAtMaxRetries() public {
+        // currentPhase must return Phase.None regardless of block number when
+        // retryCounter >= MAX_RETRIES.
+        uint64[4] memory samples = [
+            uint64(0),
+            _dealingBlockForRetry(MAX_RETRIES),
+            _dealingBlockForRetry(MAX_RETRIES) + 5 * PHASE_LENGTH,
+            _dealingBlockForRetry(MAX_RETRIES) + 100 * CYCLE_LENGTH
+        ];
+        for (uint256 i = 0; i < samples.length; i++) {
+            _assertPhase(samples[i], MAX_RETRIES, IDKGContract.Phase.None);
+            _assertPhase(samples[i], MAX_RETRIES + 7, IDKGContract.Phase.None);
+        }
+    }
+
+    function testMaxRetriesEnforcementUsesConstructorValue() public {
+        // A contract deployed with a smaller MAX_RETRIES rejects submits at
+        // its own ceiling — proving the guard reads the immutable, not a
+        // hardcoded constant.
+        uint64 tightMaxRetries = 3;
+        DKGContract tightDkg = new DKGContract(
+            PHASE_LENGTH,
+            DKG_LEAD_LENGTH,
+            tightMaxRetries,
+            address(keyperSetManager),
+            address(keyBroadcastContract)
+        );
+        // Point a fresh keyper set at the tight DKG and register it.
+        KeyperSet ks = new KeyperSet();
+        address[] memory members = new address[](3);
+        members[0] = keyper0;
+        members[1] = keyper1;
+        members[2] = keyper2;
+        ks.addMembers(members);
+        ks.setThreshold(2);
+        ks.setPublisher(address(tightDkg));
+        ks.setDKGContract(address(tightDkg));
+        ks.setFinalized();
+        uint64 activation = ACTIVATION_BLOCK_0 * 3;
+        vm.prank(dao);
+        keyperSetManager.addKeyperSet(activation, address(ks));
+        uint64 ksi = 1;
+
+        uint64 dkgStart = activation - DKG_LEAD_LENGTH;
+        // Dealing for r = MAX_RETRIES - 1 is accepted.
+        vm.roll(dkgStart + (tightMaxRetries - 1) * CYCLE_LENGTH);
+        bytes[] memory evals = new bytes[](0);
+        vm.prank(keyper0);
+        tightDkg.submitDealing(ksi, tightMaxRetries - 1, 0, hex"01", evals);
+
+        // Dealing at retryCounter == MAX_RETRIES reverts with MaxRetriesExceeded.
+        vm.roll(dkgStart + tightMaxRetries * CYCLE_LENGTH);
+        vm.prank(keyper0);
+        vm.expectRevert(DKGContract.MaxRetriesExceeded.selector);
+        tightDkg.submitDealing(ksi, tightMaxRetries, 0, hex"01", evals);
     }
 }

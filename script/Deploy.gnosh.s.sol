@@ -39,9 +39,11 @@ contract Deploy is Script {
     ) public returns (DKGContract) {
         uint64 phaseLength = uint64(vm.envOr("DKG_PHASE_LENGTH", uint256(10)));
         uint64 dkgLeadLength = uint64(vm.envOr("DKG_LEAD_LENGTH", uint256(40)));
+        uint64 maxRetries = uint64(vm.envOr("DKG_MAX_RETRIES", uint256(10)));
         DKGContract dkg = new DKGContract(
             phaseLength,
             dkgLeadLength,
+            maxRetries,
             address(ksm),
             address(kbc)
         );

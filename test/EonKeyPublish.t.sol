@@ -28,6 +28,7 @@ contract EonKeyPublishTest is Test {
         dkgContract = new DKGContract(
             1,
             1,
+            10,
             address(manager),
             address(broadcastContract)
         );

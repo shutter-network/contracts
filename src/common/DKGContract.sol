@@ -14,6 +14,8 @@ contract DKGContract is IDKGContract {
     error AlreadyVoted();
     error WrongDKGContract();
     error ZeroLengthParameter();
+    error ZeroMaxRetries();
+    error MaxRetriesExceeded();
     error EmptyEonPublicKey();
 
     event DealingSubmitted(
@@ -50,6 +52,10 @@ contract DKGContract is IDKGContract {
 
     uint64 public immutable PHASE_LENGTH;
     uint64 public immutable DKG_LEAD_LENGTH;
+    // Ceiling on the number of DKG attempts per keyper set. Valid retry
+    // counters are {0, ..., MAX_RETRIES - 1}; every submit at or above the
+    // limit reverts and currentPhase returns Phase.None.
+    uint64 public immutable MAX_RETRIES;
     // Held as concrete types for internal calls; exposed as address through the
     // IDKGContract getters below so the interface stays free of concrete-contract
     // imports (which would re-create the KeyperSetManager <-> DKGContract cycle).
@@ -68,14 +74,19 @@ contract DKGContract is IDKGContract {
     constructor(
         uint64 phaseLength,
         uint64 dkgLeadLength,
+        uint64 maxRetries,
         address keyperSetManagerAddress,
         address keyBroadcastContractAddress
     ) {
         if (phaseLength == 0 || dkgLeadLength == 0) {
             revert ZeroLengthParameter();
         }
+        if (maxRetries == 0) {
+            revert ZeroMaxRetries();
+        }
         PHASE_LENGTH = phaseLength;
         DKG_LEAD_LENGTH = dkgLeadLength;
+        MAX_RETRIES = maxRetries;
         _keyperSetManager = KeyperSetManager(keyperSetManagerAddress);
         _keyBroadcastContract = KeyBroadcastContract(
             keyBroadcastContractAddress
@@ -112,6 +123,7 @@ contract DKGContract is IDKGContract {
         uint64 keyperSetIndex,
         uint64 retryCounter
     ) public view returns (Phase) {
+        if (retryCounter >= MAX_RETRIES) return Phase.None;
         int256 start = dkgStart(keyperSetIndex, retryCounter);
         int256 offset = int256(block.number) - start;
         int256 phaseLen = int256(uint256(PHASE_LENGTH));
@@ -121,6 +133,12 @@ contract DKGContract is IDKGContract {
         if (offset < 3 * phaseLen) return Phase.Apologizing;
         if (offset < 4 * phaseLen) return Phase.Finalizing;
         return Phase.None;
+    }
+
+    function _requireWithinMaxRetries(uint64 retryCounter) internal view {
+        if (retryCounter >= MAX_RETRIES) {
+            revert MaxRetriesExceeded();
+        }
     }
 
     function _requireNotSucceeded(uint64 keyperSetIndex) internal view {
@@ -167,6 +185,7 @@ contract DKGContract is IDKGContract {
         bytes calldata commitment,
         bytes[] calldata polyEvals
     ) external {
+        _requireWithinMaxRetries(retryCounter);
         _requireNotSucceeded(keyperSetIndex);
         _requirePhase(keyperSetIndex, retryCounter, Phase.Dealing);
         _checkDKGContract(keyperSetIndex);
@@ -188,6 +207,7 @@ contract DKGContract is IDKGContract {
         uint64 keyperIndex,
         uint64[] calldata accusedIndices
     ) external {
+        _requireWithinMaxRetries(retryCounter);
         _requireNotSucceeded(keyperSetIndex);
         _requirePhase(keyperSetIndex, retryCounter, Phase.Accusing);
         _checkDKGContract(keyperSetIndex);
@@ -210,6 +230,7 @@ contract DKGContract is IDKGContract {
         uint64[] calldata accuserIndices,
         bytes[] calldata polyEvalData
     ) external {
+        _requireWithinMaxRetries(retryCounter);
         _requireNotSucceeded(keyperSetIndex);
         _requirePhase(keyperSetIndex, retryCounter, Phase.Apologizing);
         _checkDKGContract(keyperSetIndex);
@@ -232,6 +253,7 @@ contract DKGContract is IDKGContract {
         uint64 keyperIndex,
         bytes calldata eonPublicKey
     ) external {
+        _requireWithinMaxRetries(retryCounter);
         _requirePhase(keyperSetIndex, retryCounter, Phase.Finalizing);
         _checkDKGContract(keyperSetIndex);
         _checkMember(keyperSetIndex, keyperIndex);

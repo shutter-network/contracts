@@ -17,6 +17,7 @@ contract DKGBenchmark is Test {
     // the benchmark uses block windows the test runner already understands.
     uint64 constant PHASE_LENGTH = 10;
     uint64 constant DKG_LEAD_LENGTH = 40;
+    uint64 constant MAX_RETRIES = 10;
     uint64 constant ACTIVATION_BLOCK = 1000;
 
     // Non-zero fill byte. Real BLS/ECIES payloads are non-zero, and calldata
@@ -50,6 +51,7 @@ contract DKGBenchmark is Test {
         dkg = new DKGContract(
             PHASE_LENGTH,
             DKG_LEAD_LENGTH,
+            MAX_RETRIES,
             address(ksm),
             address(kbc)
         );

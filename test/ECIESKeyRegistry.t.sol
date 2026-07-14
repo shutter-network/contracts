@@ -35,6 +35,7 @@ contract ECIESKeyRegistryTest is Test {
         DKGContract dkgContract = new DKGContract(
             1,
             1,
+            10,
             address(keyperSetManager),
             address(0)
         );

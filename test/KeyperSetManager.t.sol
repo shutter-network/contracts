@@ -19,6 +19,7 @@ contract KeyperSetManagerTest is Test {
 
     uint64 constant PHASE_LENGTH = 10;
     uint64 constant DKG_LEAD_LENGTH = 40;
+    uint64 constant MAX_RETRIES = 10;
 
     function setUp() public {
         owner = vm.addr(42);
@@ -48,6 +49,7 @@ contract KeyperSetManagerTest is Test {
             new DKGContract(
                 PHASE_LENGTH,
                 DKG_LEAD_LENGTH,
+                MAX_RETRIES,
                 manager,
                 address(keyBroadcastContract)
             );

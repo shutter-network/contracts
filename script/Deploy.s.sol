@@ -27,6 +27,7 @@ contract DeployScript is Script {
     uint256 threshold;
     uint64 dkgPhaseLength;
     uint64 dkgLeadLength;
+    uint64 dkgMaxRetries;
     // address[] memory keypers;
 
     address inboxAddress;
@@ -67,6 +68,7 @@ contract DeployScript is Script {
 
         dkgPhaseLength = uint64(vm.envOr("DKG_PHASE_LENGTH", uint256(10)));
         dkgLeadLength = uint64(vm.envOr("DKG_LEAD_LENGTH", uint256(40)));
+        dkgMaxRetries = uint64(vm.envOr("DKG_MAX_RETRIES", uint256(10)));
     }
 
     function deploy() public {
@@ -111,6 +113,7 @@ contract DeployScript is Script {
             dkgContract = new DKGContract(
                 dkgPhaseLength,
                 dkgLeadLength,
+                dkgMaxRetries,
                 address(keyperSetManager),
                 address(keyBroadcastContract)
             );

@@ -34,6 +34,7 @@ contract DKGState is Script {
         address dkgAddr;
         uint64 phaseLength;
         uint64 dkgLeadLength;
+        uint64 maxRetries;
         uint64 cycleLen;
         int256 dkgStart0;
         bool succeededFlag;
@@ -102,6 +103,7 @@ contract DKGState is Script {
         DKGContract dkg = DKGContract(ctx.dkgAddr);
         ctx.phaseLength = dkg.PHASE_LENGTH();
         ctx.dkgLeadLength = dkg.DKG_LEAD_LENGTH();
+        ctx.maxRetries = dkg.MAX_RETRIES();
         ctx.cycleLen = dkg.cycleLength();
         ctx.dkgStart0 = dkg.dkgStart(ctx.setIndex, 0);
         ctx.succeededFlag = dkg.succeeded(ctx.setIndex);
@@ -157,6 +159,7 @@ contract DKGState is Script {
         console.log("DKG contract config:");
         console.log("  PHASE_LENGTH:      ", uint256(c.phaseLength));
         console.log("  DKG_LEAD_LENGTH:   ", uint256(c.dkgLeadLength));
+        console.log("  MAX_RETRIES:       ", uint256(c.maxRetries));
         console.log("  cycleLength:       ", uint256(c.cycleLen));
         console.log(
             string.concat("  dkgStart(index,0): ", _intToString(c.dkgStart0))

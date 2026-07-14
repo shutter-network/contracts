@@ -45,6 +45,7 @@ contract KeyBroadcastTest is Test {
         DKGContract dkgContract = new DKGContract(
             1,
             1,
+            10,
             address(keyperSetManager),
             address(keyBroadcastContract)
         );
