@@ -20,6 +20,10 @@ interface IDKGContract {
 
     function succeeded(uint64 keyperSetIndex) external view returns (bool);
 
+    function succeededAtRetry(
+        uint64 keyperSetIndex
+    ) external view returns (uint64);
+
     function voteCount(
         uint64 keyperSetIndex,
         uint64 retryCounter,

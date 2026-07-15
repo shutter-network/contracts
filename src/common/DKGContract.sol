@@ -62,10 +62,14 @@ contract DKGContract is IDKGContract {
     KeyperSetManager internal immutable _keyperSetManager;
     KeyBroadcastContract internal immutable _keyBroadcastContract;
 
-    // Set to true once a DKG Instance for Keyper Set Index k has reached the
-    // success-vote threshold. Never reset — gates the success-triggering logic
-    // in submitSuccessVote.
-    mapping(uint64 => bool) public succeeded;
+    // Set once a DKG Instance for Keyper Set Index k has reached the
+    // success-vote threshold. Stores the winning retry counter plus one so a
+    // single slot encodes both "did it succeed" and "which retry won"; zero
+    // means "not yet succeeded". Never reset once non-zero — gates the
+    // success-triggering logic in submitSuccessVote. Read via succeeded() and
+    // succeededAtRetry(); direct mapping access is internal so external
+    // callers cannot observe the +1 encoding.
+    mapping(uint64 => uint64) internal _successRetryPlusOne;
     mapping(uint64 => mapping(uint64 => mapping(bytes32 => uint64)))
         public voteCount;
     mapping(uint64 => mapping(uint64 => mapping(address => bool)))
@@ -141,8 +145,20 @@ contract DKGContract is IDKGContract {
         }
     }
 
+    function succeeded(uint64 keyperSetIndex) public view returns (bool) {
+        return _successRetryPlusOne[keyperSetIndex] != 0;
+    }
+
+    function succeededAtRetry(
+        uint64 keyperSetIndex
+    ) external view returns (uint64) {
+        uint64 v = _successRetryPlusOne[keyperSetIndex];
+        require(v != 0, "not succeeded");
+        return v - 1;
+    }
+
     function _requireNotSucceeded(uint64 keyperSetIndex) internal view {
-        if (succeeded[keyperSetIndex]) {
+        if (succeeded(keyperSetIndex)) {
             revert AlreadySucceeded();
         }
     }
@@ -279,13 +295,13 @@ contract DKGContract is IDKGContract {
         // Late-arriving votes within the Finalizing window are accepted and
         // emit the event above, but do not re-trigger success once it has
         // already been recorded.
-        if (!succeeded[keyperSetIndex]) {
+        if (!succeeded(keyperSetIndex)) {
             address keyperSetAddress = _keyperSetManager.getKeyperSetAddress(
                 keyperSetIndex
             );
             uint64 threshold = KeyperSet(keyperSetAddress).getThreshold();
             if (newCount >= threshold) {
-                succeeded[keyperSetIndex] = true;
+                _successRetryPlusOne[keyperSetIndex] = retryCounter + 1;
                 // Errors are intentionally swallowed: if the key has already
                 // been broadcast (or the publisher is not authorized), the DKG
                 // outcome is still considered successful.

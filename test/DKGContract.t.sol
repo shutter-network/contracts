@@ -665,6 +665,36 @@ contract DKGContractTest is Test {
         dkgContract.submitApology(0, 1, 0, accusers, polyEvals);
     }
 
+    function testSucceededAtRetryReturnsWinningRetry() public {
+        // Drive retry 0 to Finalizing without reaching threshold, then drive
+        // retry 1 to success. succeededAtRetry(0) must report 1.
+        vm.roll(FINALIZING_BLOCK);
+        vm.prank(keyper0);
+        dkgContract.submitSuccessVote(0, 0, 0, EON_KEY_A);
+        // No second vote for retry 0. Roll into retry 1 Finalizing.
+        uint64 r1FinalizingBlock = DKG_START_R0 +
+            CYCLE_LENGTH +
+            3 *
+            PHASE_LENGTH;
+        vm.roll(r1FinalizingBlock);
+        vm.prank(keyper0);
+        dkgContract.submitSuccessVote(0, 1, 0, EON_KEY_A);
+        vm.prank(keyper1);
+        dkgContract.submitSuccessVote(0, 1, 1, EON_KEY_A);
+        assertTrue(dkgContract.succeeded(0));
+        assertEq(dkgContract.succeededAtRetry(0), 1);
+    }
+
+    function testSucceededAtRetryRevertsBeforeSuccess() public {
+        vm.expectRevert("not succeeded");
+        dkgContract.succeededAtRetry(0);
+    }
+
+    function testSucceededAtRetryZeroForFirstRetryWin() public {
+        _drive_to_success_for_set0();
+        assertEq(dkgContract.succeededAtRetry(0), 0);
+    }
+
     function testPostSuccessSuccessVoteEmitsEventWithoutNewSuccess() public {
         // After success for r=0, a late vote in r=0's Finalizing window (if
         // still open) is accepted and emits SuccessVoteSubmitted but must not
