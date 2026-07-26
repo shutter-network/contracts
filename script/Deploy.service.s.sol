@@ -5,7 +5,6 @@ import "forge-std/Script.sol";
 import "../src/common/DKGContract.sol";
 import "../src/common/ECIESKeyRegistry.sol";
 import "../src/common/KeyBroadcastContract.sol";
-import "../src/common/KeyperSet.sol";
 import "../src/common/KeyperSetManager.sol";
 import "../src/shutter-service/ShutterRegistry.sol";
 import "../src/shutter-service/ShutterEventTriggerRegistry.sol";
@@ -18,23 +17,6 @@ contract Deploy is Script {
         KeyperSetManager ksm = new KeyperSetManager(deployerAddress);
         ksm.initialize(deployerAddress, deployerAddress);
         console.log("keyper set manager initialised");
-
-        // add bootstrap keyper set
-        KeyperSet fakeKeyperset = new KeyperSet();
-        // The bootstrap keyper set must designate a DKG Contract bound to this
-        // manager, otherwise addKeyperSet reverts DKGContractNotSet (registration
-        // -time validation from the check-dkg-address change). The bootstrap set
-        // never runs DKG, so a placeholder KeyBroadcastContract address is fine.
-        DKGContract bootstrapDkg = new DKGContract(
-            10,
-            40,
-            10,
-            address(ksm),
-            address(0)
-        );
-        fakeKeyperset.setDKGContract(address(bootstrapDkg));
-        fakeKeyperset.setFinalized();
-        ksm.addKeyperSet(0, address(fakeKeyperset));
 
         console.log("KeyperSetManager:", address(ksm));
         return ksm;
