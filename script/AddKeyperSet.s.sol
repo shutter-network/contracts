@@ -4,8 +4,6 @@ pragma solidity ^0.8.22;
 import "forge-std/Script.sol";
 import {KeyperSet} from "../src/common/KeyperSet.sol";
 import {KeyperSetManager} from "../src/common/KeyperSetManager.sol";
-import {KeyBroadcastContract} from "../src/common/KeyBroadcastContract.sol";
-import {EonKeyPublish} from "../src/common/EonKeyPublish.sol";
 
 error ActivationDeltaTooLow();
 error ThresholdExceedsKeyperSetSize(uint256 threshold, uint256 keyperSetSize);
@@ -34,13 +32,6 @@ contract AddKeyperSet is Script {
             keyperSetManagerAddress
         );
 
-        address keyBroadcastContractAddress = vm.envAddress(
-            "KEYBROADCAST_ADDRESS"
-        );
-        KeyBroadcastContract keyBroadcastContract = KeyBroadcastContract(
-            keyBroadcastContractAddress
-        );
-
         address dkgContract = vm.envAddress("DKG_CONTRACT_ADDRESS");
 
         address[] memory keypers = vm.envAddress("KEYPER_ADDRESSES", ",");
@@ -51,18 +42,13 @@ contract AddKeyperSet is Script {
 
         uint64 keyperSetIndex = keyperSetManager.getNumKeyperSets();
         KeyperSet keyperSet = new KeyperSet();
-        EonKeyPublish eonKeyPublish = new EonKeyPublish(
-            address(keyperSet),
-            address(keyBroadcastContract),
-            keyperSetIndex
-        );
         keyperSet.addMembers(keypers);
         keyperSet.setThreshold(uint64(threshold));
-        keyperSet.setPublisher(address(eonKeyPublish));
+        keyperSet.setPublisher(dkgContract);
         keyperSet.setDKGContract(dkgContract);
         keyperSet.setFinalized();
         console.log("keyperSet:", address(keyperSet));
-        console.log("eonKeyPublish:", address(eonKeyPublish));
+        console.log("publisher (= dkgContract):", dkgContract);
 
         uint64 activationBlock = uint64(block.number + activationDelta);
         keyperSetManager.addKeyperSet(activationBlock, address(keyperSet));
