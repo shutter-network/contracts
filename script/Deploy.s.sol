@@ -3,6 +3,8 @@ pragma solidity ^0.8.22;
 
 import "forge-std/Script.sol";
 import "../src/shop/Inbox.sol";
+import "../src/common/DKGContract.sol";
+import "../src/common/ECIESKeyRegistry.sol";
 import "../src/common/KeyperSet.sol";
 import "../src/common/KeyperSetManager.sol";
 import "../src/common/KeyBroadcastContract.sol";
@@ -14,6 +16,8 @@ contract DeployScript is Script {
     KeyperSet keyperSet;
     KeyperSetManager keyperSetManager;
     KeyBroadcastContract keyBroadcastContract;
+    DKGContract dkgContract;
+    ECIESKeyRegistry eciesKeyRegistry;
 
     uint256 deployerPrivateKey;
     address sequencerAddress;
@@ -21,12 +25,17 @@ contract DeployScript is Script {
     uint64 blockGasLimit;
     uint256 activationDelta;
     uint256 threshold;
+    uint64 dkgPhaseLength;
+    uint64 dkgLeadLength;
+    uint64 dkgMaxRetries;
     // address[] memory keypers;
 
     address inboxAddress;
     address keyperSetManagerAddress;
     address keyBroadcastContractAddress;
     address keyperSetAddress;
+    address dkgContractAddress;
+    address eciesKeyRegistryAddress;
 
     function setUp() public {
         deployerPrivateKey = vm.envUint("PRIVATE_KEY");
@@ -51,6 +60,15 @@ contract DeployScript is Script {
             address(0)
         );
         keyperSetAddress = vm.envOr("KEYPERSET_ADDRESS", address(0));
+        dkgContractAddress = vm.envOr("DKG_CONTRACT_ADDRESS", address(0));
+        eciesKeyRegistryAddress = vm.envOr(
+            "ECIES_KEY_REGISTRY_ADDRESS",
+            address(0)
+        );
+
+        dkgPhaseLength = uint64(vm.envOr("DKG_PHASE_LENGTH", uint256(10)));
+        dkgLeadLength = uint64(vm.envOr("DKG_LEAD_LENGTH", uint256(40)));
+        dkgMaxRetries = uint64(vm.envOr("DKG_MAX_RETRIES", uint256(10)));
     }
 
     function deploy() public {
@@ -90,6 +108,27 @@ contract DeployScript is Script {
             console.log("KeyperSet deployed at:", address(keyperSet));
         } else {
             keyperSet = KeyperSet(keyperSetAddress);
+        }
+        if (dkgContractAddress == address(0)) {
+            dkgContract = new DKGContract(
+                dkgPhaseLength,
+                dkgLeadLength,
+                dkgMaxRetries,
+                address(keyperSetManager),
+                address(keyBroadcastContract)
+            );
+            console.log("DKGContract deployed at:", address(dkgContract));
+        } else {
+            dkgContract = DKGContract(dkgContractAddress);
+        }
+        if (eciesKeyRegistryAddress == address(0)) {
+            eciesKeyRegistry = new ECIESKeyRegistry(address(keyperSetManager));
+            console.log(
+                "ECIESKeyRegistry deployed at:",
+                address(eciesKeyRegistry)
+            );
+        } else {
+            eciesKeyRegistry = ECIESKeyRegistry(eciesKeyRegistryAddress);
         }
         vm.stopBroadcast();
     }
@@ -132,9 +171,12 @@ contract DeployScript is Script {
         keyperSet.addMembers(keypers);
         keyperSet.setThreshold(uint64(threshold));
 
-        // Step 2: Call setPublisher with deployer address (the sender)
-        keyperSet.setPublisher(deployerAddress);
-        console.log("Eon Key Publisher set to deployer's address");
+        // Step 2: Set the DKG Contract as publisher so it can broadcast eon keys
+        keyperSet.setPublisher(address(dkgContract));
+        console.log(
+            "Eon Key Publisher set to DKGContract:",
+            address(dkgContract)
+        );
 
         keyperSet.setFinalized();
         console.log("KeyperSet finalized");

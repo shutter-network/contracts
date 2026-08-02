@@ -27,6 +27,11 @@ contract KeyperSetRevertAfterFinalizedTest is Test {
         vm.expectRevert(AlreadyFinalized.selector);
         keyperSet.setPublisher(address(5));
     }
+
+    function testSetDKGContract() public {
+        vm.expectRevert(AlreadyFinalized.selector);
+        keyperSet.setDKGContract(address(5));
+    }
 }
 
 contract KeyperSetTest is Test {
@@ -130,5 +135,22 @@ contract KeyperSetTest is Test {
 
         assertEq(keyperSet.isAllowedToBroadcastEonKey(address(1)), false);
         assertEq(keyperSet.isAllowedToBroadcastEonKey(address(5)), true);
+    }
+
+    function testDKGContract() public {
+        assertEq(keyperSet.getDKGContract(), address(0));
+        keyperSet.setDKGContract(address(42));
+        assertEq(keyperSet.getDKGContract(), address(42));
+    }
+
+    function testSetDKGContractOnlyOwner() public {
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Ownable.OwnableUnauthorizedAccount.selector,
+                address(1)
+            )
+        );
+        vm.prank(address(1));
+        keyperSet.setDKGContract(address(5));
     }
 }

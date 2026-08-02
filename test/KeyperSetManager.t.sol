@@ -4,14 +4,22 @@ pragma solidity ^0.8.20;
 import "forge-std/Test.sol";
 import "../src/common/KeyperSetManager.sol";
 import "../src/common/KeyperSet.sol";
+import "../src/common/DKGContract.sol";
+import "../src/common/KeyBroadcastContract.sol";
 
 contract KeyperSetManagerTest is Test {
     KeyperSetManager public keyperSetManager;
+    KeyBroadcastContract public keyBroadcastContract;
+    DKGContract public dkgContract;
     KeyperSet public members0;
     KeyperSet public members1;
     address public owner;
     address public dao;
     address public sequencer;
+
+    uint64 constant PHASE_LENGTH = 10;
+    uint64 constant DKG_LEAD_LENGTH = 40;
+    uint64 constant MAX_RETRIES = 10;
 
     function setUp() public {
         owner = vm.addr(42);
@@ -21,10 +29,30 @@ contract KeyperSetManagerTest is Test {
         keyperSetManager = new KeyperSetManager(owner);
         vm.prank(owner);
         keyperSetManager.initialize(dao, sequencer);
+        keyBroadcastContract = new KeyBroadcastContract(
+            address(keyperSetManager)
+        );
+        dkgContract = deployDKGContract(address(keyperSetManager));
         members0 = new KeyperSet();
+        members0.setDKGContract(address(dkgContract));
         members0.setFinalized();
         members1 = new KeyperSet();
+        members1.setDKGContract(address(dkgContract));
         members1.setFinalized();
+    }
+
+    // Deploys a DKGContract bound to the given KeyperSetManager. The
+    // KeyBroadcastContract address is irrelevant to addKeyperSet validation,
+    // which only reads back DKGContract.keyperSetManager().
+    function deployDKGContract(address manager) internal returns (DKGContract) {
+        return
+            new DKGContract(
+                PHASE_LENGTH,
+                DKG_LEAD_LENGTH,
+                MAX_RETRIES,
+                manager,
+                address(keyBroadcastContract)
+            );
     }
 
     function testGetNumKeyperSets() public {
@@ -54,6 +82,36 @@ contract KeyperSetManagerTest is Test {
         vm.expectRevert(KeyperSetNotFinalized.selector);
         vm.prank(dao);
         keyperSetManager.addKeyperSet(0, address(ks));
+    }
+
+    function testAddKeyperSetRevertsOnZeroDKGContract() public {
+        KeyperSet ks = new KeyperSet();
+        ks.setFinalized();
+        vm.expectRevert(DKGContractNotSet.selector);
+        vm.prank(dao);
+        keyperSetManager.addKeyperSet(1000, address(ks));
+    }
+
+    function testAddKeyperSetRevertsOnMismatchedDKGContractManager() public {
+        // A DKGContract bound to a different KeyperSetManager must be rejected.
+        KeyperSetManager otherManager = new KeyperSetManager(owner);
+        DKGContract mismatchedDKG = deployDKGContract(address(otherManager));
+        KeyperSet ks = new KeyperSet();
+        ks.setDKGContract(address(mismatchedDKG));
+        ks.setFinalized();
+        vm.expectRevert(DKGContractManagerMismatch.selector);
+        vm.prank(dao);
+        keyperSetManager.addKeyperSet(1000, address(ks));
+    }
+
+    function testAddKeyperSetAcceptsMatchingDKGContract() public {
+        KeyperSet ks = new KeyperSet();
+        ks.setDKGContract(address(dkgContract));
+        ks.setFinalized();
+        vm.prank(dao);
+        keyperSetManager.addKeyperSet(1000, address(ks));
+        assertEq(keyperSetManager.getNumKeyperSets(), 1);
+        assertEq(keyperSetManager.getKeyperSetAddress(0), address(ks));
     }
 
     function testAddKeyperSetRequiresIncreasingActivationBlock() public {

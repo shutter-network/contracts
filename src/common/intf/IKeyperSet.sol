@@ -12,5 +12,7 @@ interface IKeyperSet {
 
     function getThreshold() external view returns (uint64);
 
+    function getDKGContract() external view returns (address);
+
     function isAllowedToBroadcastEonKey(address a) external view returns (bool);
 }
