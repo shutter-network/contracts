@@ -8,7 +8,10 @@ import {KeyBroadcastContract} from "../src/common/KeyBroadcastContract.sol";
 import {EonKeyPublish} from "../src/common/EonKeyPublish.sol";
 
 error ActivationDeltaTooLow();
+error EmptyKeyperSet();
+error ThresholdTooLow();
 error ThresholdExceedsKeyperSetSize(uint256 threshold, uint256 keyperSetSize);
+error DuplicateKeyper(address keyper);
 error UnexpectedKeyperSet(
     uint256 index,
     address expectedKeyperSet,
@@ -20,12 +23,15 @@ contract AddKeyperSet is Script {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address deployerAddress = vm.addr(deployerPrivateKey);
         console.log("deployer:", deployerAddress);
-        vm.startBroadcast(deployerPrivateKey);
 
         uint256 activationDelta = vm.envOr("ACTIVATION_DELTA", uint256(1));
         if (activationDelta < 1) {
             revert ActivationDeltaTooLow();
         }
+
+        address[] memory keypers = vm.envAddress("KEYPER_ADDRESSES", ",");
+        uint256 threshold = vm.envUint("THRESHOLD");
+        _validateKeyperConfig(keypers, threshold);
 
         address keyperSetManagerAddress = vm.envAddress(
             "KEYPERSETMANAGER_ADDRESS"
@@ -41,11 +47,7 @@ contract AddKeyperSet is Script {
             keyBroadcastContractAddress
         );
 
-        address[] memory keypers = vm.envAddress("KEYPER_ADDRESSES", ",");
-        uint256 threshold = vm.envUint("THRESHOLD");
-        if (threshold > keypers.length) {
-            revert ThresholdExceedsKeyperSetSize(threshold, keypers.length);
-        }
+        vm.startBroadcast(deployerPrivateKey);
 
         uint64 keyperSetIndex = keyperSetManager.getNumKeyperSets();
         KeyperSet keyperSet = new KeyperSet();
@@ -78,5 +80,28 @@ contract AddKeyperSet is Script {
         }
 
         vm.stopBroadcast();
+    }
+
+    function _validateKeyperConfig(
+        address[] memory keypers,
+        uint256 threshold
+    ) internal pure {
+        if (keypers.length == 0) {
+            revert EmptyKeyperSet();
+        }
+        if (threshold == 0) {
+            revert ThresholdTooLow();
+        }
+        if (threshold > keypers.length) {
+            revert ThresholdExceedsKeyperSetSize(threshold, keypers.length);
+        }
+
+        for (uint256 i = 0; i < keypers.length; i++) {
+            for (uint256 j = i + 1; j < keypers.length; j++) {
+                if (keypers[i] == keypers[j]) {
+                    revert DuplicateKeyper(keypers[i]);
+                }
+            }
+        }
     }
 }
